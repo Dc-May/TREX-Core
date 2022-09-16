@@ -1,20 +1,20 @@
 {
   "version": "3.7.0",
   "study": {
-    "name": "sundance_sc1a_test7",
+    "name": "sundance_Entropy_Warmup_NewAdv",
       "description": "",
       "start_datetime": "2015-06-01 0:0:0",
       "start_datetime_sequence": "sequential",
       "timezone": "America/Vancouver",
-      "days": 12,
+      "days": 7,
       "time_step_size": 3600,
       "generations": 2000,
-      "profiles_db_location": "postgresql://postgres:postgres@localhost/SunDance"
+      "profiles_db_location": "postgresql://postgres:postgres@stargate/SunDance"
 //      "sim_root": "/home/trex/sim/"
     },
   "server": {
       "host": "",
-      "port": 5205
+      "port": 5210
     },
   "training": {
 //   "hyperparameters": {
@@ -24,10 +24,10 @@
 ////     "warmup_actor": [true]
 //    },
     "curriculum": {
-      "20": {
+      "42": {
         "anneal": {
-          "warmup_actor":  [false, "set"],
-          "entropy_reg": [0.95,"multiply", 0.05]
+         "warmup_actor":  [false, "set"],
+         "entropy_reg": [0.98,"multiply", 0.00]
           }
         }
       }
@@ -74,7 +74,7 @@
           "monthly_sdr": 0
         }
       },
-      "House1": {
+      "NoWarmup_EntropyFloor": {
         "type": "Residential",
         "trader": {
 
@@ -85,35 +85,36 @@
           "P_max": 3000, //max output for bess
           "actions": ["storage"], // 'price', 'quantity'
           "learning": true,
-//          "observations": ["generation", "load", "soc"],
-          "observations": ["generation", "load", "soc", "time_sin", "time_cos"],
+          "observations": ["generation", "load", "soc", "time_sin_hour", "time_cos_hour"],
 
           "use_early_stop_critic": true,
-          "warmup_actor": true,
           "alpha_critic": 5e-4,
           "critic_hidden": [64,64],
           "critic_patience": 60,
           "critic_type": "GRU",
+
+          "warmup_actor": false,
+          "warmup_targets": [false, false],
 
           "use_early_stop_actor": true,
           "alpha_actor": 1.5e-4,
           "actor_type": "GRU",
           "actor_hidden": [64,64],
           "policy_clip": 0.2,
-          "kl_stop": 0.05,  // try with 0.1 next
+          "kl_stop": 0.02,  // try with 0.1 next
           "gamma": 0.99,
           "gae_lambda": 0.95,
           "normalize_advantages": true,
-          "entropy_reg": 0.99, //Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+          "entropy_reg": 0.01, //Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
 
-          "g_grad_norm": 10,
-          "batch_size": 256,
+          "g_grad_norm": 0.5, //https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+          "batch_size": 64,
 
           // might wanna tweak the next 3
-          "experience_replay_buffer_length": 1728, // longer might be safer, like 1440
+          "experience_replay_buffer_length": 336, // longer might be safer, like 1440
           "trajectory_length": 24, //trajectory_length >>= main seasonalityof data (1.5-2 days, likely)
-          "burn_in": 24,             //BURN_IN >= main seasonalityof data (1day,likely)
-          "max_train_steps": 300,
+          "burn_in": 12,             //BURN_IN >= main seasonalityof data (1day,likely)
+          "max_train_steps": 80,
 
           "limit_actions": true,
 
@@ -134,7 +135,690 @@
           "efficiency": 1,
           "monthly_sdr": 0
         }
-      }
+      },
+      "NoWarmup_EntropyFloor_NoSine": {
+        "type": "Residential",
+        "trader": {
+
+          "track_metrics": true,
+          "type": "ppo_trader_multivar",
+          "bid_price": 0.14,
+          "ask_price": 0.07,
+          "P_max": 3000, //max output for bess
+          "actions": ["storage"], // 'price', 'quantity'
+          "learning": true,
+          "observations": ["generation", "load", "soc"],
+
+          "use_early_stop_critic": true,
+          "alpha_critic": 5e-4,
+          "critic_hidden": [64,64],
+          "critic_patience": 60,
+          "critic_type": "GRU",
+
+          "warmup_actor": false,
+          "warmup_targets": [false, false],
+
+          "use_early_stop_actor": true,
+          "alpha_actor": 1.5e-4,
+          "actor_type": "GRU",
+          "actor_hidden": [64,64],
+          "policy_clip": 0.2,
+          "kl_stop": 0.02,  // try with 0.1 next
+          "gamma": 0.99,
+          "gae_lambda": 0.95,
+          "normalize_advantages": true,
+          "entropy_reg": 0.01, //Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+
+          "g_grad_norm": 0.5, //https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+          "batch_size": 64,
+
+          // might wanna tweak the next 3
+          "experience_replay_buffer_length": 336, // longer might be safer, like 1440
+          "trajectory_length": 24, //trajectory_length >>= main seasonalityof data (1.5-2 days, likely)
+          "burn_in": 12,             //BURN_IN >= main seasonalityof data (1day,likely)
+          "max_train_steps": 80,
+
+          "limit_actions": true,
+
+          "reward_function": "net_profit",
+         "use_synthetic_profile": "SunDance_10011"
+
+        },
+        "load": {
+          "scale": 1
+        },
+        "generation": {
+          "scale": 1
+        },
+        "storage": {
+          "type": "Bess",
+          "capacity": 6000,
+          "power": 3000,
+          "efficiency": 1,
+          "monthly_sdr": 0
+        }
+      },
+      "NoWarmup_EntropyDecay": {
+  "type": "Residential",
+  "trader": {
+
+    "track_metrics": true,
+    "type": "ppo_trader_multivar",
+    "bid_price": 0.14,
+    "ask_price": 0.07,
+    "P_max": 3000, //max output for bess
+    "actions": ["storage"], // 'price', 'quantity'
+    "learning": true,
+    "observations": ["generation", "load", "soc", "time_sin_hour", "time_cos_hour"],
+
+    "use_early_stop_critic": true,
+    "alpha_critic": 5e-4,
+    "critic_hidden": [64,64],
+    "critic_patience": 60,
+    "critic_type": "GRU",
+
+    "warmup_actor": false,
+    "warmup_targets": [false, false],
+
+    "use_early_stop_actor": true,
+    "alpha_actor": 1.5e-4,
+    "actor_type": "GRU",
+    "actor_hidden": [64,64],
+    "policy_clip": 0.2,
+    "kl_stop": 0.02,  // try with 0.1 next
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "normalize_advantages": true,
+    "entropy_reg": 0.99, //Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+
+    "g_grad_norm": 0.5, //https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+    "batch_size": 64,
+
+    // might wanna tweak the next 3
+    "experience_replay_buffer_length": 336, // longer might be safer, like 1440
+    "trajectory_length": 24, //trajectory_length >>= main seasonalityof data (1.5-2 days, likely)
+    "burn_in": 12,             //BURN_IN >= main seasonalityof data (1day,likely)
+    "max_train_steps": 80,
+
+    "limit_actions": true,
+
+    "reward_function": "net_profit",
+   "use_synthetic_profile": "SunDance_10011"
+
+  },
+  "load": {
+    "scale": 1
+  },
+  "generation": {
+    "scale": 1
+  },
+  "storage": {
+    "type": "Bess",
+    "capacity": 6000,
+    "power": 3000,
+    "efficiency": 1,
+    "monthly_sdr": 0
+  }
+},
+      "NoWarmup_EntropyDecay_NoSine": {
+  "type": "Residential",
+  "trader": {
+
+    "track_metrics": true,
+    "type": "ppo_trader_multivar",
+    "bid_price": 0.14,
+    "ask_price": 0.07,
+    "P_max": 3000, //max output for bess
+    "actions": ["storage"], // 'price', 'quantity'
+    "learning": true,
+    "observations": ["generation", "load", "soc"],
+
+    "use_early_stop_critic": true,
+    "alpha_critic": 5e-4,
+    "critic_hidden": [64,64],
+    "critic_patience": 60,
+    "critic_type": "GRU",
+
+
+    "warmup_actor": false,
+    "warmup_targets": [false, false],
+
+    "use_early_stop_actor": true,
+    "alpha_actor": 1.5e-4,
+    "actor_type": "GRU",
+    "actor_hidden": [64,64],
+    "policy_clip": 0.2,
+    "kl_stop": 0.02,  // try with 0.1 next
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "normalize_advantages": true,
+    "entropy_reg": 0.99, //Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+
+    "g_grad_norm": 0.5, //https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+    "batch_size": 64,
+
+    // might wanna tweak the next 3
+    "experience_replay_buffer_length": 336, // longer might be safer, like 1440
+    "trajectory_length": 24, //trajectory_length >>= main seasonalityof data (1.5-2 days, likely)
+    "burn_in": 12,             //BURN_IN >= main seasonalityof data (1day,likely)
+    "max_train_steps": 80,
+
+    "limit_actions": true,
+
+    "reward_function": "net_profit",
+   "use_synthetic_profile": "SunDance_10011"
+
+  },
+  "load": {
+    "scale": 1
+  },
+  "generation": {
+    "scale": 1
+  },
+  "storage": {
+    "type": "Bess",
+    "capacity": 6000,
+    "power": 3000,
+    "efficiency": 1,
+    "monthly_sdr": 0
+  }
+},
+      "UniformWarmup_EntropyDecay": {
+  "type": "Residential",
+  "trader": {
+
+    "track_metrics": true,
+    "type": "ppo_trader_multivar",
+    "bid_price": 0.14,
+    "ask_price": 0.07,
+    "P_max": 3000, //max output for bess
+    "actions": ["storage"], // 'price', 'quantity'
+    "learning": true,
+    "observations": ["generation", "load", "soc", "time_sin_hour", "time_cos_hour"],
+
+    "use_early_stop_critic": true,
+    "alpha_critic": 5e-4,
+    "critic_hidden": [64,64],
+    "critic_patience": 60,
+    "critic_type": "GRU",
+
+    "warmup_actor": true,
+    "warmup_targets": [1.0, 1.0],
+
+    "use_early_stop_actor": true,
+    "alpha_actor": 1.5e-4,
+    "actor_type": "GRU",
+    "actor_hidden": [64,64],
+    "policy_clip": 0.2,
+    "kl_stop": 0.02,  // try with 0.1 next
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "normalize_advantages": true,
+    "entropy_reg": 0.99, //Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+
+    "g_grad_norm": 0.5, //https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+    "batch_size": 64,
+
+    // might wanna tweak the next 3
+    "experience_replay_buffer_length": 336, // longer might be safer, like 1440
+    "trajectory_length": 24, //trajectory_length >>= main seasonalityof data (1.5-2 days, likely)
+    "burn_in": 12,             //BURN_IN >= main seasonalityof data (1day,likely)
+    "max_train_steps": 80,
+
+    "limit_actions": true,
+
+    "reward_function": "net_profit",
+   "use_synthetic_profile": "SunDance_10011"
+
+  },
+  "load": {
+    "scale": 1
+  },
+  "generation": {
+    "scale": 1
+  },
+  "storage": {
+    "type": "Bess",
+    "capacity": 6000,
+    "power": 3000,
+    "efficiency": 1,
+    "monthly_sdr": 0
+  }
+},
+      "UniformWarmup_EntropyDecay_NoSine": {
+  "type": "Residential",
+  "trader": {
+
+    "track_metrics": true,
+    "type": "ppo_trader_multivar",
+    "bid_price": 0.14,
+    "ask_price": 0.07,
+    "P_max": 3000, //max output for bess
+    "actions": ["storage"], // 'price', 'quantity'
+    "learning": true,
+    "observations": ["generation", "load", "soc"],
+
+    "use_early_stop_critic": true,
+    "alpha_critic": 5e-4,
+    "critic_hidden": [64,64],
+    "critic_patience": 60,
+    "critic_type": "GRU",
+
+    "warmup_actor": true,
+    "warmup_targets": [1.0, 1.0],
+
+    "use_early_stop_actor": true,
+    "alpha_actor": 1.5e-4,
+    "actor_type": "GRU",
+    "actor_hidden": [64,64],
+    "policy_clip": 0.2,
+    "kl_stop": 0.02,  // try with 0.1 next
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "normalize_advantages": true,
+    "entropy_reg": 0.99, //Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+
+    "g_grad_norm": 0.5, //https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+    "batch_size": 64,
+
+    // might wanna tweak the next 3
+    "experience_replay_buffer_length": 336, // longer might be safer, like 1440
+    "trajectory_length": 24, //trajectory_length >>= main seasonalityof data (1.5-2 days, likely)
+    "burn_in": 12,             //BURN_IN >= main seasonalityof data (1day,likely)
+    "max_train_steps": 80,
+
+    "limit_actions": true,
+
+    "reward_function": "net_profit",
+   "use_synthetic_profile": "SunDance_10011"
+
+  },
+  "load": {
+    "scale": 1
+  },
+  "generation": {
+    "scale": 1
+  },
+  "storage": {
+    "type": "Bess",
+    "capacity": 6000,
+    "power": 3000,
+    "efficiency": 1,
+    "monthly_sdr": 0
+  }
+},
+      "UniformWarmup_EntropyFloor": {
+  "type": "Residential",
+  "trader": {
+
+    "track_metrics": true,
+    "type": "ppo_trader_multivar",
+    "bid_price": 0.14,
+    "ask_price": 0.07,
+    "P_max": 3000, //max output for bess
+    "actions": ["storage"], // 'price', 'quantity'
+    "learning": true,
+    "observations": ["generation", "load", "soc", "time_sin_hour", "time_cos_hour"],
+
+    "use_early_stop_critic": true,
+    "alpha_critic": 5e-4,
+    "critic_hidden": [64,64],
+    "critic_patience": 60,
+    "critic_type": "GRU",
+
+    "warmup_actor": true,
+    "warmup_targets": [1.0, 1.0],
+
+    "use_early_stop_actor": true,
+    "alpha_actor": 1.5e-4,
+    "actor_type": "GRU",
+    "actor_hidden": [64,64],
+    "policy_clip": 0.2,
+    "kl_stop": 0.02,  // try with 0.1 next
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "normalize_advantages": true,
+    "entropy_reg": 0.01, //Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+
+    "g_grad_norm": 0.5, //https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+    "batch_size": 64,
+
+    // might wanna tweak the next 3
+    "experience_replay_buffer_length": 336, // longer might be safer, like 1440
+    "trajectory_length": 24, //trajectory_length >>= main seasonalityof data (1.5-2 days, likely)
+    "burn_in": 12,             //BURN_IN >= main seasonalityof data (1day,likely)
+    "max_train_steps": 80,
+
+    "limit_actions": true,
+
+    "reward_function": "net_profit",
+   "use_synthetic_profile": "SunDance_10011"
+
+  },
+  "load": {
+    "scale": 1
+  },
+  "generation": {
+    "scale": 1
+  },
+  "storage": {
+    "type": "Bess",
+    "capacity": 6000,
+    "power": 3000,
+    "efficiency": 1,
+    "monthly_sdr": 0
+  }
+},
+      "UniformWarmup_EntropyFloor_NoSine": {
+  "type": "Residential",
+  "trader": {
+
+    "track_metrics": true,
+    "type": "ppo_trader_multivar",
+    "bid_price": 0.14,
+    "ask_price": 0.07,
+    "P_max": 3000, //max output for bess
+    "actions": ["storage"], // 'price', 'quantity'
+    "learning": true,
+    "observations": ["generation", "load", "soc"],
+
+    "use_early_stop_critic": true,
+    "alpha_critic": 5e-4,
+    "critic_hidden": [64,64],
+    "critic_patience": 60,
+    "critic_type": "GRU",
+
+    "warmup_actor": true,
+    "warmup_targets": [1.0, 1.0],
+
+    "use_early_stop_actor": true,
+    "alpha_actor": 1.5e-4,
+    "actor_type": "GRU",
+    "actor_hidden": [64,64],
+    "policy_clip": 0.2,
+    "kl_stop": 0.02,  // try with 0.1 next
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "normalize_advantages": true,
+    "entropy_reg": 0.01, //Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+
+    "g_grad_norm": 0.5, //https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+    "batch_size": 64,
+
+    // might wanna tweak the next 3
+    "experience_replay_buffer_length": 336, // longer might be safer, like 1440
+    "trajectory_length": 24, //trajectory_length >>= main seasonalityof data (1.5-2 days, likely)
+    "burn_in": 12,             //BURN_IN >= main seasonalityof data (1day,likely)
+    "max_train_steps": 80,
+
+    "limit_actions": true,
+
+    "reward_function": "net_profit",
+   "use_synthetic_profile": "SunDance_10011"
+
+  },
+  "load": {
+    "scale": 1
+  },
+  "generation": {
+    "scale": 1
+  },
+  "storage": {
+    "type": "Bess",
+    "capacity": 6000,
+    "power": 3000,
+    "efficiency": 1,
+    "monthly_sdr": 0
+  }
+},
+      "0MeanWarmup_EntropyDecay": {
+  "type": "Residential",
+  "trader": {
+
+    "track_metrics": true,
+    "type": "ppo_trader_multivar",
+    "bid_price": 0.14,
+    "ask_price": 0.07,
+    "P_max": 3000, //max output for bess
+    "actions": ["storage"], // 'price', 'quantity'
+    "learning": true,
+    "observations": ["generation", "load", "soc", "time_sin_hour", "time_cos_hour"],
+
+    "use_early_stop_critic": true,
+    "alpha_critic": 5e-4,
+    "critic_hidden": [64,64],
+    "critic_patience": 60,
+    "critic_type": "GRU",
+
+    "warmup_actor": true,
+    "warmup_targets": [60.0, 60.0],
+
+    "use_early_stop_actor": true,
+    "alpha_actor": 1.5e-4,
+    "actor_type": "GRU",
+    "actor_hidden": [64,64],
+    "policy_clip": 0.2,
+    "kl_stop": 0.02,  // try with 0.1 next
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "normalize_advantages": true,
+    "entropy_reg": 0.99, //Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+
+    "g_grad_norm": 0.5, //https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+    "batch_size": 64,
+
+    // might wanna tweak the next 3
+    "experience_replay_buffer_length": 336, // longer might be safer, like 1440
+    "trajectory_length": 24, //trajectory_length >>= main seasonalityof data (1.5-2 days, likely)
+    "burn_in": 12,             //BURN_IN >= main seasonalityof data (1day,likely)
+    "max_train_steps": 80,
+
+    "limit_actions": true,
+
+    "reward_function": "net_profit",
+   "use_synthetic_profile": "SunDance_10011"
+
+  },
+  "load": {
+    "scale": 1
+  },
+  "generation": {
+    "scale": 1
+  },
+  "storage": {
+    "type": "Bess",
+    "capacity": 6000,
+    "power": 3000,
+    "efficiency": 1,
+    "monthly_sdr": 0
+  }
+},
+      "0MeanWarmup_EntropyDecay_NoSine": {
+  "type": "Residential",
+  "trader": {
+
+    "track_metrics": true,
+    "type": "ppo_trader_multivar",
+    "bid_price": 0.14,
+    "ask_price": 0.07,
+    "P_max": 3000, //max output for bess
+    "actions": ["storage"], // 'price', 'quantity'
+    "learning": true,
+    "observations": ["generation", "load", "soc"],
+
+    "use_early_stop_critic": true,
+    "alpha_critic": 5e-4,
+    "critic_hidden": [64,64],
+    "critic_patience": 60,
+    "critic_type": "GRU",
+
+    "warmup_actor": true,
+    "warmup_targets": [60.0, 60.0],
+
+    "use_early_stop_actor": true,
+    "alpha_actor": 1.5e-4,
+    "actor_type": "GRU",
+    "actor_hidden": [64,64],
+    "policy_clip": 0.2,
+    "kl_stop": 0.02,  // try with 0.1 next
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "normalize_advantages": true,
+    "entropy_reg": 0.99, //Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+
+    "g_grad_norm": 0.5, //https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+    "batch_size": 64,
+
+    // might wanna tweak the next 3
+    "experience_replay_buffer_length": 336, // longer might be safer, like 1440
+    "trajectory_length": 24, //trajectory_length >>= main seasonalityof data (1.5-2 days, likely)
+    "burn_in": 12,             //BURN_IN >= main seasonalityof data (1day,likely)
+    "max_train_steps": 80,
+
+    "limit_actions": true,
+
+    "reward_function": "net_profit",
+   "use_synthetic_profile": "SunDance_10011"
+
+  },
+  "load": {
+    "scale": 1
+  },
+  "generation": {
+    "scale": 1
+  },
+  "storage": {
+    "type": "Bess",
+    "capacity": 6000,
+    "power": 3000,
+    "efficiency": 1,
+    "monthly_sdr": 0
+  }
+},
+      "0MeanWarmup_EntropyFloor": {
+  "type": "Residential",
+  "trader": {
+
+    "track_metrics": true,
+    "type": "ppo_trader_multivar",
+    "bid_price": 0.14,
+    "ask_price": 0.07,
+    "P_max": 3000, //max output for bess
+    "actions": ["storage"], // 'price', 'quantity'
+    "learning": true,
+    "observations": ["generation", "load", "soc", "time_sin_hour", "time_cos_hour"],
+
+    "use_early_stop_critic": true,
+    "alpha_critic": 5e-4,
+    "critic_hidden": [64,64],
+    "critic_patience": 60,
+    "critic_type": "GRU",
+
+    "warmup_actor": true,
+    "warmup_targets": [60.0, 60.0],
+
+    "use_early_stop_actor": true,
+    "alpha_actor": 1.5e-4,
+    "actor_type": "GRU",
+    "actor_hidden": [64,64],
+    "policy_clip": 0.2,
+    "kl_stop": 0.02,  // try with 0.1 next
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "normalize_advantages": true,
+    "entropy_reg": 0.01, //Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+
+    "g_grad_norm": 0.5, //https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+    "batch_size": 64,
+
+    // might wanna tweak the next 3
+    "experience_replay_buffer_length": 336, // longer might be safer, like 1440
+    "trajectory_length": 24, //trajectory_length >>= main seasonalityof data (1.5-2 days, likely)
+    "burn_in": 12,             //BURN_IN >= main seasonalityof data (1day,likely)
+    "max_train_steps": 80,
+
+    "limit_actions": true,
+
+    "reward_function": "net_profit",
+   "use_synthetic_profile": "SunDance_10011"
+
+  },
+  "load": {
+    "scale": 1
+  },
+  "generation": {
+    "scale": 1
+  },
+  "storage": {
+    "type": "Bess",
+    "capacity": 6000,
+    "power": 3000,
+    "efficiency": 1,
+    "monthly_sdr": 0
+  }
+},
+      "0MeanWarmup_EntropyFloor_NoSine": {
+  "type": "Residential",
+  "trader": {
+
+    "track_metrics": true,
+    "type": "ppo_trader_multivar",
+    "bid_price": 0.14,
+    "ask_price": 0.07,
+    "P_max": 3000, //max output for bess
+    "actions": ["storage"], // 'price', 'quantity'
+    "learning": true,
+    "observations": ["generation", "load", "soc"],
+
+    "use_early_stop_critic": true,
+    "alpha_critic": 5e-4,
+    "critic_hidden": [64,64],
+    "critic_patience": 60,
+    "critic_type": "GRU",
+
+    "warmup_actor": true,
+    "warmup_targets": [60.0, 60.0],
+
+    "use_early_stop_actor": true,
+    "alpha_actor": 1.5e-4,
+    "actor_type": "GRU",
+    "actor_hidden": [64,64],
+    "policy_clip": 0.2,
+    "kl_stop": 0.02,  // try with 0.1 next
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "normalize_advantages": true,
+    "entropy_reg": 0.01, //Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+
+    "g_grad_norm": 0.5, //https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+    "batch_size": 64,
+
+    // might wanna tweak the next 3
+    "experience_replay_buffer_length": 336, // longer might be safer, like 1440
+    "trajectory_length": 24, //trajectory_length >>= main seasonalityof data (1.5-2 days, likely)
+    "burn_in": 12,             //BURN_IN >= main seasonalityof data (1day,likely)
+    "max_train_steps": 80,
+
+    "limit_actions": true,
+
+    "reward_function": "net_profit",
+   "use_synthetic_profile": "SunDance_10011"
+
+  },
+  "load": {
+    "scale": 1
+  },
+  "generation": {
+    "scale": 1
+  },
+  "storage": {
+    "type": "Bess",
+    "capacity": 6000,
+    "power": 3000,
+    "efficiency": 1,
+    "monthly_sdr": 0
+  }
+}
     }
   }
   

@@ -103,6 +103,7 @@ class Trader:
         self.g_grad_norm = kwargs['g_grad_norm']
 
         self.warmup_actor = kwargs['warmup_actor']
+        self.warmup_targets = kwargs['warmup_targets'] if 'warmup_targets' in kwargs else [1,1]
         self.observations = kwargs['observations']
 
         self.burn_in = kwargs['burn_in'] if 'burn_in' in kwargs else 0
@@ -255,17 +256,16 @@ class Trader:
             if self.burn_in > 0:
                 pi_new = pi_new[:, self.burn_in:, :]
 
-            targets = tf.ones(shape=pi_new.shape)
-            losses_warmup = self.ppo_actor_warmup_loss(targets, pi_new)
-
-            losses_warmup = tf.reduce_mean(losses_warmup)
+            targets = tf.ones(shape=pi_new.shape) * self.warmup_targets
+            losses_warmup = tf.reduce_mean(tf.square(pi_new - targets))
+            # losses_warmup = self.ppo_actor_warmup_loss(targets, pi_new)
+            # losses_warmup = tf.reduce_mean(losses_warmup)
 
         # calculate the stopping crtierions
         if self.use_early_stop_critic:
             stop_actor_training, self.ppo_actor = actor_stopper.check_iteration(losses_warmup.numpy(),
                                                                              self.ppo_actor)
 
-        # early stop or learn
         if not stop_actor_training:
             data_for_tb = [{'name': 'actor_warmup_loss',
                             'data': losses_warmup,
@@ -310,21 +310,24 @@ class Trader:
             ratio = tf.exp(log_probs_new - log_probs_old)  # pi(a|s) / pi_old(a|s)
             # entropy = -dist.entropy()
             entropy = -log_probs_new
+            if self.normalize_advantages: #https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail7
+                batch_mean =tf.math.reduce_mean(advantages)
+                batch_std =tf.math.reduce_std(advantages)
+                advantages = (advantages - batch_mean)/tf.math.maximum(batch_std,1e-10)
+
             soft_advantages = (1.0 - self.entropy_reg) * advantages + self.entropy_reg * entropy
 
             clipped_ratio = tf.clip_by_value(ratio, 1 - self.policy_clip, 1 + self.policy_clip)
-            min_ratio = tf.math.minimum(ratio, clipped_ratio)
-            # weighted_ratio = clipped_ratio * soft_advantages
-            # loss_actor = -tf.math.minimum(ratio * soft_advantages, weighted_ratio)
-            loss_actor = -min_ratio * soft_advantages
-            # loss_actor = tf.clip_by_value(loss_actor, clip_value_min=-100, clip_value_max=100)
+            weighted_ratio = ratio*soft_advantages
+            weighted_clipped_ratio = clipped_ratio*soft_advantages
+            loss_actor = -tf.math.minimum(weighted_ratio, weighted_clipped_ratio)
             loss_actor = tf.math.reduce_mean(loss_actor)
 
             # PPO early stopping as implemented in baselines
             approx_kl = tf.math.reduce_mean(log_probs_old - log_probs_new)
 
             # collect entropy because why not. If this keeps growing we might have a too small memory and too smal batchsize
-            entropy = tf.reduce_mean(-log_probs_new)
+            entropy = tf.reduce_mean(entropy)
 
             # early stopping condition or keep training, consider having this a running avg of 5 or sth?
             if self.use_early_stop_actor:
@@ -342,8 +345,6 @@ class Trader:
             # log
             data_for_tb = [{'name': 'actor_loss', 'data': loss_actor, 'type': 'scalar', 'step': self.train_step}, #Main loss, if too spiky we want to see where it comes from
                            {'name': 'ratio', 'data': tf.reduce_mean(ratio), 'type': 'scalar', 'step': self.train_step}, #Ratio of old and new policy probabilities .... Loss component
-                           {'name': 'min_ratio', 'data': tf.reduce_mean(min_ratio), 'type': 'scalar', 'step': self.train_step}, #Loss componens
-                           {'name': 'ratio x SoftAdv', 'data': tf.reduce_mean(ratio * soft_advantages), 'type': 'scalar', 'step': self.train_step}, #Loss componens
                            {'name': 'approx_KLD', 'data': approx_kl, 'type': 'scalar', 'step': self.train_step}, #Distance pseudometric between old and new policy, we want this to decrease over training as this would indicate convergence
                            {'name': 'entropy', 'data': entropy, 'type': 'scalar', 'step': self.train_step}, #Randomness of policy, we want the differential entropy to keep dropping slowly over the course of training
                            {'name': 'early_stop_actor', 'data': stop_actor_training, 'type': 'scalar',
@@ -356,7 +357,7 @@ class Trader:
 
         return stop_actor_training
 
-    def train_critic(self, critic_inputs, returns,  critic_stopper):
+    def train_critic(self, critic_inputs, V_target,  critic_stopper):
         with tf.GradientTape() as tape_critic:
             # calculate critic loss and backpropagate
 
@@ -366,8 +367,10 @@ class Trader:
 
             if self.burn_in > 0: #discard unwanted stages
                 Vs = Vs[:, self.burn_in:]
-                returns = returns[:, self.burn_in:]
-            losses_critic = self.ppo_critic_loss(Vs, returns)
+                V_target = V_target[:, self.burn_in:]
+            loss = tf.square(Vs - V_target)
+            losses_critic = tf.reduce_mean(loss)
+            # losses_critic = self.ppo_critic_loss(Vs, V_target)
 
             # calculate the stopping crtierions
             if self.use_early_stop_critic:
@@ -392,14 +395,15 @@ class Trader:
 
         stop_critic_training = False
         stop_actor_training = False
-        max_train_steps = self.train_step + self.max_train_steps
+        sgd_steps = self.max_train_steps*5 if self.warmup_actor else self.max_train_steps
+        max_train_steps = self.train_step + sgd_steps
 
         critic_stopper = EarlyStopper(patience=self.critic_patience)
         if self.warmup_actor:
             actor_stopper = EarlyStopper(patience=self.critic_patience)
 
         while self.train_step <= max_train_steps and not (stop_actor_training and stop_critic_training):
-            keys_to_fetch = ['returns', 'observations', 'advantages', 'actions_taken', 'log_probs', 'critic_states', 'actor_states']
+            keys_to_fetch = ['returns', 'observations', 'advantages', 'actions_taken', 'log_probs', 'critic_states', 'actor_states', 'v_target']
             batch = self.experience_replay_buffer.fetch_batch(batchsize=self.batch_size, keys=keys_to_fetch) #to see the batch data structure check this method
             observations = tf.convert_to_tensor(batch['observations'], dtype=tf.float32)
 
@@ -407,6 +411,7 @@ class Trader:
             if not stop_critic_training:
                 # manage the inputs
                 returns = tf.convert_to_tensor(batch['returns'], dtype=tf.float32)
+                v_target = tf.convert_to_tensor(batch['v_target'])
 
                 critic_inputs = {'observations': observations}
                 if self.critic_type == 'GRU':                                                       # this still seems somewhat unclean
@@ -514,15 +519,23 @@ class Trader:
             if 'load' in self.observations:
                 observations_t.append(next_load)
 
-        if 'time_sin' or 'time_cos' in self.observations:
-            minutes = int(current_round[0]/60)
-            if 'time_sin' in self.observations:
-                observations_t.append(np.sin(2*np.pi*minutes/24)) #ToDo: ATM THIS IS ONLY FOR THE FAKE 24H synth profile!!
-            if 'time_cos' in self.observations:
-                observations_t.append(np.cos(2 * np.pi * minutes / 24))  # ToDo: ATM THIS IS ONLY FOR THE FAKE 24H synth profile!!
+        if 'time_sin_hour' or 'time_cos_hour' or 'time_sin_day' or 'time_cos_day' in self.observations:
+            minutes = int(current_round[0]/60) #ToDo: there should be an inbuilt conversion for these formats
+            hour = int(minutes/60)
+            day = int(hour/24)
+
+            if 'time_sin_hour' in self.observations:
+                observations_t.append(np.sin(2*np.pi*hour/24))
+            if 'time_cos_hour' in self.observations:
+                observations_t.append(np.cos(2 * np.pi * hour / 24))
+            if 'time_sin_day' in self.observations:
+                observations_t.append(np.sin(2 * np.pi * day / 7))
+            if 'time_cos_day' in self.observations:
+                observations_t.append(np.cos(2 * np.pi * day / 7))
 
 
-        # print('gen', next_generation, 'load', next_load, 'time', current_round[0])
+
+                    # print('gen', next_generation, 'load', next_load, 'time', current_round[0])
         if 'soc' in self.observations:
             storage_schedule = await self.__participant['storage']['check_schedule'](current_round)
             soc = storage_schedule[current_round]['projected_soc_end']
@@ -570,15 +583,14 @@ class Trader:
             V_t = critic_outputs.pop('value')
 
         # log
-        #ToDo: add calculation for explained variance once Lab is back online, see https://github.com/ray-project/ray/blob/7f03368fc0f56fee478e9ac15576b626fb1103a9/rllib/utils/tf_utils.py
         V_t = tf.squeeze(V_t).numpy().tolist()
-        data_for_tb = [{'name': 'v_t', 'data': V_t, 'type': 'scalar', 'step': self.total_step}, #This we want to increase during training, as that would indicate our agent thinks is going to do better
-                       {'name': 'obs_mean', 'data': np.mean(observations_t), 'type': 'scalar', 'step': self.total_step}, #These should be consistent-ish wrt to each other and not super spiky (think orders of magnitude)
+        #ToDo: add calculation for explained variance once Lab is back online, see https://github.com/ray-project/ray/blob/7f03368fc0f56fee478e9ac15576b626fb1103a9/rllib/utils/tf_utils.py
+        data_for_tb = [{'name': 'obs_mean', 'data': np.mean(observations_t), 'type': 'scalar', 'step': self.total_step}, #These should be consistent-ish wrt to each other and not super spiky (think orders of magnitude)
                        {'name': 'obs_median', 'data': np.median(observations_t), 'type': 'scalar', 'step': self.total_step},
                       ]
         tb_plotter(data_for_tb, self.summary_writer)
 
-        # V_t = tf.squeeze(V_t).numpy().tolist()
+        #
         taken_action, log_prob, dist_action = await self.__sample_pi(pi_dict)
 
         # lets log the stuff needed for the replay buffer

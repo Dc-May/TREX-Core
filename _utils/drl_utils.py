@@ -12,17 +12,20 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow_probability as tfp
 
 def build_hidden_layer(signal, type='FFNN', num_hidden=32, name='Actor', initial_state=None, initializer=k.initializers.HeNormal()):
+    sqrt2 = tf.math.sqrt(2.0)
+    initializer =k.initializers.Orthogonal(gain=sqrt2, seed=None)
 
     if type == 'FFNN':
         signal = k.layers.Dense(num_hidden,
-                                         activation="elu",
+                                         activation="tanh",
                                          kernel_initializer=initializer,
                                          name=name)(signal)
         return signal, None
     elif type == 'GRU':
+
         signal, last_state = k.layers.GRU(num_hidden,
                               activation='tanh',
-                                recurrent_activation='sigmoid',
+                              recurrent_activation='sigmoid',
                               kernel_initializer=initializer,
                               return_sequences=True, return_state=True,
                               name=name)(signal, initial_state=initial_state)
@@ -55,7 +58,7 @@ def build_hidden(internal_signal, inputs, outputs, hidden_actor=[32,32,32], type
     return internal_signal, inputs, outputs, initial_states_dummy
 
 def build_actor(num_inputs=4, num_actions=3, hidden_actor=[32], actor_type='FFNN'):
-    initializer = k.initializers.HeNormal()
+    initializer = k.initializers.Orthogonal(gain=0.01, seed=None)
     inputs = {}
     outputs = {}
 
@@ -66,10 +69,11 @@ def build_actor(num_inputs=4, num_actions=3, hidden_actor=[32], actor_type='FFNN
     internal_signal,  inputs, outputs, initial_states_dummy = build_hidden(internal_signal, inputs, outputs, hidden_actor, actor_type)
 
     concentrations = k.layers.Dense(2 * num_actions,
-                                    activation='tanh', #ToDo: test tanh vs None
+                                    activation=None, #ToDo: test tanh vs None
                                     kernel_initializer=initializer,
                                     name='concentrations')(internal_signal)
     concentrations = huber(concentrations)
+    # concentrations = tf.math.maximum(concentrations, 1e-10) #ToDo: test this vs huber
     outputs['pi'] = concentrations
     actor_model = k.Model(inputs=inputs, outputs=outputs)
 
@@ -82,7 +86,6 @@ def build_actor(num_inputs=4, num_actions=3, hidden_actor=[32], actor_type='FFNN
     return out_dict
 
 def build_critic(num_inputs=4, hidden_critic=[32, 32, 32], critic_type='FFNN'):
-    initializer = k.initializers.HeNormal()
     inputs = {}
     outputs = {}
     shape = (num_inputs,) if critic_type != 'GRU' else (None, num_inputs,)
@@ -90,9 +93,9 @@ def build_critic(num_inputs=4, hidden_critic=[32, 32, 32], critic_type='FFNN'):
     inputs['observations'] = internal_signal
 
     internal_signal, inputs, outputs, initial_states_dummy = build_hidden(internal_signal, inputs, outputs, hidden_critic, critic_type)
-
+    initializer = k.initializers.Orthogonal()
     value = k.layers.Dense(1,
-                           activation='tanh', #ToDo: test tanh vs None
+                           activation=None, #ToDo: test tanh vs None
                            kernel_initializer=initializer,
                            name='ValueHead')(internal_signal)
     outputs['value'] = value
@@ -109,7 +112,6 @@ def build_actor_critic_models(num_inputs=4,
                               critic_type='FFNN', #['FFNN', 'GRU'] #ToDo
                               num_actions=4):
     # needs to return a suitable actor ANN, ctor PDF function and critic ANN
-    initializer = tf.keras.initializers.HeNormal()
     actor_dict = build_actor(num_inputs=num_inputs,
                               num_actions=num_actions,
                               hidden_actor=hidden_actor,
@@ -222,7 +224,7 @@ class EarlyStopper:
 
         return stop_early, model
 
-def normalize_buffer_entry(buffer, key):
+def normalize_buffer_entry(buffer, key): #taken from https://github.com/ray-project/ray/blob/70153f2d995c70167ac1f64b83c44a6029e290e6/rllib/utils/sgd.py standardized
     array = []
     for episode in buffer.keys():
         episode_array = [step[key] for step in buffer[episode]]
@@ -233,7 +235,7 @@ def normalize_buffer_entry(buffer, key):
 
     for episode in buffer.keys():
         for t in range(len(buffer[episode])):
-            buffer[episode][t][key] = (buffer[episode][t][key] - mean) / (std + 1e-10)
+            buffer[episode][t][key] = (buffer[episode][t][key] - mean) / max(std + 1e-10, 1e-4)
 
     return buffer
 
@@ -436,43 +438,68 @@ class PPO_ExperienceReplay:
             return False
 
     async def calculate_advantage(self, gamma=0.99, gae_lambda=0.95, normalize=True):
-
         for episode in self.buffer:
-            V_episode = [step['values'] for step in self.buffer[episode]]
-            V_pseudo_terminal = V_episode[-1]
+            # self.buffer = normalize_buffer_entry(self.buffer, key='rewards')
 
-            r_episode = [step['rewards'] for step in self.buffer[episode]]
-            r_episode.append(V_pseudo_terminal)
-            r_episode_array = np.array(r_episode)
+            r = [step['rewards'] for step in self.buffer[episode]]
+            V = [step['values'] for step in self.buffer[episode]]
+            G = [None for step in self.buffer[episode]]
+            A = [None for step in self.buffer[episode]]
+            # A.append(None)
+            for t in reversed(range(len(r))):
+                if t == len(r)-1: # last step
+                    # G[t] = r[t] + V[t] #thats our bootstrap from the value estimate
+                    # delta_t = r[t] - V[t]
+                    G[t] = V[t]
+                    delta_t = r[t] - V[t]
+                    A[t] = delta_t
+                else:
+                    G[t] = r[t] + gamma*G[t+1]
+                    delta_t = r[t] + gamma*V[t+1] - V[t]
+                    A[t] = delta_t - gamma*gae_lambda*A[t+1]
 
-            G_episode = discount_cumsum(r_episode_array, gamma)[:-1]
-            for t in range(len(G_episode)):
-                self.buffer[episode][t]['returns'] = G_episode[t]
-
-        A = []
-        self.buffer = normalize_buffer_entry(self.buffer, key='rewards')
-        for episode in self.buffer: #because we need to calculate those separately!
-            V_episode = [step['values'] for step in self.buffer[episode]]
-            V_pseudo_terminal = V_episode[-1]
-            V_episode.append(V_pseudo_terminal)
-            V_episode = np.array(V_episode)
-
-            r_episode = [step['rewards'] for step in self.buffer[episode]]
-            r_episode.append(V_pseudo_terminal)
-            r_episode = np.array(r_episode)
-
-            deltas = (r_episode[:-1] ) + gamma * V_episode[1:] - V_episode[:-1]
-            A_eisode = discount_cumsum(deltas, gamma * gae_lambda)
-            A_eisode = A_eisode
-            A_eisode = A_eisode.tolist()
-            A.extend(A_eisode)
-            for t in range(len(A_eisode)):
-                self.buffer[episode][t]['advantages'] = A_eisode[t]
+            A = A[:len(r)]
+            for t in range(len(r)):
+                self.buffer[episode][t]['advantages'] = A[t]
+                self.buffer[episode][t]['returns'] = G[t]
+                self.buffer[episode][t]['v_target'] = A[t] + V[t]
 
         #normalize advantage:
-        if normalize:
-            self.buffer = normalize_buffer_entry(self.buffer, key='advantages')
+        # if normalize:
+        #    self.buffer = normalize_buffer_entry(self.buffer, key='advantages')
         #ToDo: do some research if normalizing rewards here is useful
+        #ToDo: figure out if we want to normalize this BEFORE calculating v_target or after?
+
+        # for episode in self.buffer:
+        #     V_episode = [step['values'] for step in self.buffer[episode]]
+        #     V_pseudo_terminal = V_episode[-1]
+        #
+        #     r_episode = [step['rewards'] for step in self.buffer[episode]]
+        #     r_episode.append(V_pseudo_terminal)
+        #     r_episode_array = np.array(r_episode)
+        #
+        #     G_episode = discount_cumsum(r_episode_array, gamma)[:-1]
+        #     for t in range(len(G_episode)):
+        #         self.buffer[episode][t]['returns'] = G_episode[t]
+        #
+        # # self.buffer = normalize_buffer_entry(self.buffer, key='rewards')
+        # for episode in self.buffer: #because we need to calculate those separately!
+        #     V_episode = [step['values'] for step in self.buffer[episode]]
+        #     V_pseudo_terminal = V_episode[-1]
+        #     V_episode.append(V_pseudo_terminal)
+        #     V_episode = np.array(V_episode)
+        #
+        #     r_episode = [step['rewards'] for step in self.buffer[episode]]
+        #     r_episode.append(V_pseudo_terminal)
+        #     r_episode = np.array(r_episode)
+        #
+        #     deltas = (r_episode[:-1] ) + gamma * V_episode[1:] - V_episode[:-1]
+        #     A_eisode = discount_cumsum(deltas, gamma * gae_lambda)
+        #     A_eisode = A_eisode.tolist()
+        #     for t in range(len(A_eisode)):
+        #         self.buffer[episode][t]['advantages'] = A_eisode[t]
+
+
 
         return True
 
