@@ -11,6 +11,14 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow_probability as tfp
 
+def _explained_variance(ypred, y): #ypred and y should both be 1dim arrays
+    # from https://github.com/openai/baselines/blob/52255beda5f5c8760b0ae1f676aa656bb1a61f80/baselines/common/math_util.py
+    # we want this to be as close to 1 as possible, this means our critic is good
+    assert y.ndim == 1 and ypred.ndim == 1
+    vary = np.var(y)
+    delta_var = np.var(y - ypred)
+    return np.nan if vary == 0 else 1 -  delta_var/ vary
+
 def build_hidden_layer(signal, type='FFNN', num_hidden=32, name='Actor', initial_state=None, initializer=k.initializers.HeNormal()):
     sqrt2 = tf.math.sqrt(2.0)
     initializer =k.initializers.Orthogonal(gain=sqrt2, seed=None)
@@ -57,8 +65,55 @@ def build_hidden(internal_signal, inputs, outputs, hidden_actor=[32,32,32], type
 
     return internal_signal, inputs, outputs, initial_states_dummy
 
+def critic_head(internal_signal):
+    initializer = k.initializers.Orthogonal()
+    value = k.layers.Dense(1,
+                           activation=None, #ToDo: test tanh vs None
+                           kernel_initializer=initializer,
+                           name='ValueHead')(internal_signal)
+    return value
+
+def actor_head(internal_signal, num_actions):
+    policy_head_initializer = k.initializers.Orthogonal(gain=0.1, seed=None)
+    concentrations = k.layers.Dense(2 * num_actions,
+                                    activation=None,  # ToDo: test tanh vs None
+                                    kernel_initializer=policy_head_initializer,
+                                    bias_initializer=k.initializers.Constant(3),
+                                    name='concentrations')(internal_signal)
+    concentrations = tf.math.abs(concentrations) + 1e-10
+    return concentrations
+
+def build_shared_actor_critic(num_inputs=4, num_actions=2, hidden=[32, 32, 32], model_type='FFNN'):
+
+    inputs = {}
+    outputs = {}
+
+    shape = (num_inputs,) if model_type != 'GRU' else (None, num_inputs,)
+    internal_signal = k.layers.Input(shape=shape, name='Input')
+    inputs['observations'] = internal_signal
+
+    internal_signal, inputs, outputs, initial_states_dummy = build_hidden(internal_signal, inputs, outputs,
+                                                                          hidden, model_type)
+
+    #policy head
+    concentrations = actor_head(internal_signal, num_actions)
+    outputs['pi'] = concentrations
+
+    #value_head
+    value = critic_head(internal_signal)
+    outputs['value'] = value
+
+    shared_model = k.Model(inputs=inputs, outputs=outputs)
+
+    actor_distrib = tfp.distributions.Beta
+
+    out_dict = {'model': shared_model,
+                'distribution': actor_distrib,
+                'initial_states_dummy': initial_states_dummy}
+
+    return out_dict
+
 def build_actor(num_inputs=4, num_actions=3, hidden_actor=[32], actor_type='FFNN'):
-    initializer = k.initializers.Orthogonal(gain=0.01, seed=None)
     inputs = {}
     outputs = {}
 
@@ -68,12 +123,9 @@ def build_actor(num_inputs=4, num_actions=3, hidden_actor=[32], actor_type='FFNN
 
     internal_signal,  inputs, outputs, initial_states_dummy = build_hidden(internal_signal, inputs, outputs, hidden_actor, actor_type)
 
-    concentrations = k.layers.Dense(2 * num_actions,
-                                    activation=None, #ToDo: test tanh vs None
-                                    kernel_initializer=initializer,
-                                    name='concentrations')(internal_signal)
-    concentrations = huber(concentrations)
-    # concentrations = tf.math.maximum(concentrations, 1e-10) #ToDo: test this vs huber
+    concentrations = actor_head(internal_signal, num_actions)
+    concentrations = tf.math.abs(concentrations) + 1e-10
+
     outputs['pi'] = concentrations
     actor_model = k.Model(inputs=inputs, outputs=outputs)
 
@@ -93,11 +145,8 @@ def build_critic(num_inputs=4, hidden_critic=[32, 32, 32], critic_type='FFNN'):
     inputs['observations'] = internal_signal
 
     internal_signal, inputs, outputs, initial_states_dummy = build_hidden(internal_signal, inputs, outputs, hidden_critic, critic_type)
-    initializer = k.initializers.Orthogonal()
-    value = k.layers.Dense(1,
-                           activation=None, #ToDo: test tanh vs None
-                           kernel_initializer=initializer,
-                           name='ValueHead')(internal_signal)
+
+    value = critic_head(internal_signal)
     outputs['value'] = value
     critic_model = k.Model(inputs=inputs, outputs=outputs)
 
@@ -105,22 +154,95 @@ def build_critic(num_inputs=4, hidden_critic=[32, 32, 32], critic_type='FFNN'):
                    'initial_states_dummy': initial_states_dummy}
     return critic_dict
 
-def build_actor_critic_models(num_inputs=4,
-                              hidden_actor=[32, 32, 32],
-                              actor_type='FFNN', #['FFNN', 'GRU'] #ToDo
-                              hidden_critic=[32,32,32],
-                              critic_type='FFNN', #['FFNN', 'GRU'] #ToDo
-                              num_actions=4):
+def build_actor_critic_models(**kwargs):
     # needs to return a suitable actor ANN, ctor PDF function and critic ANN
-    actor_dict = build_actor(num_inputs=num_inputs,
-                              num_actions=num_actions,
-                              hidden_actor=hidden_actor,
-                              actor_type=actor_type)
-    critic_dict = build_critic(num_inputs=num_inputs,
-                              hidden_critic=hidden_critic,
-                              critic_type=critic_type)
+    share_params =kwargs['share_params']
+    if not share_params:
+        actor_dict = build_actor(num_inputs=kwargs['num_inputs'],
+                                  num_actions=kwargs['num_actions'],
+                                  hidden_actor=kwargs['hidden_actor'],
+                                  actor_type=kwargs['actor_type'])
+        critic_dict = build_critic(num_inputs=kwargs['num_inputs'],
+                                  hidden_critic=kwargs['hidden_critic'],
+                                  critic_type=kwargs['critic_type'])
 
-    return actor_dict, critic_dict
+        return actor_dict, critic_dict
+
+    else:
+        actor_critic_dict = build_shared_actor_critic(num_inputs=kwargs['num_inputs'],
+                                                      num_actions=kwargs['num_actions'],
+                                                      hidden=kwargs['hidden_actor_critic'],
+                                                      model_type=kwargs['actor_critic_type'])
+        return actor_critic_dict
+
+def calculate_critic_loss( inputs, V_target, critic_model, burn_in=None):
+    critic_outputs = critic_model(inputs)
+    Vs = critic_outputs.pop('value')
+    Vs = tf.squeeze(Vs, axis=-1)
+    if burn_in is not None:
+        if burn_in > 0:  # discard unwanted stages
+            Vs = Vs[:, burn_in:]
+            V_target = V_target[:, burn_in:]
+    loss = tf.square(Vs - V_target)
+    losses_critic = tf.reduce_mean(loss)
+
+    return losses_critic
+
+def calculate_ppo_loss(actor_inputs, a_taken, log_probs_old, advantages,
+                             actor_model, actor_distribution, actionspace,
+                             policy_clip_ratio=0.2, burn_in=None):
+    actor_outputs = actor_model(actor_inputs)
+    pi = actor_outputs.pop('pi')
+    if burn_in is not None:
+        if burn_in > 0:
+            pi = pi[:, burn_in:, :]
+            a_taken = a_taken[:, burn_in:, :]
+            log_probs_old = log_probs_old[:, burn_in:, :]
+            advantages = advantages[:, burn_in:]
+
+    dist = build_multivar(pi, actor_distribution, actionspace)
+
+    log_probs_new = dist.log_prob(a_taken)
+    # check = tf.reduce_sum(log_probs_new).numpy()
+    # if np.isnan(check) or np.isinf(check):
+    #     probs = dist.prob(a_taken)
+    #     print('shit')
+    # This is how baselines does it
+    log_probs_new = tf.squeeze(log_probs_new)
+    log_probs_old = tf.squeeze(log_probs_old)
+
+    ratio = tf.exp(log_probs_new - log_probs_old)  # pi(a|s) / pi_old(a|s)
+
+    clipped_ratio = tf.clip_by_value(ratio, 1 - policy_clip_ratio, 1 + policy_clip_ratio)
+
+    weighted_ratio = ratio * advantages
+    weighted_clipped_ratio = clipped_ratio * advantages
+    loss_actor = -tf.math.minimum(weighted_ratio, weighted_clipped_ratio)
+    loss_actor = tf.math.reduce_mean(loss_actor)
+
+    # clip fraction, see https://github.com/openai/spinningup/blob/038665d62d569055401d91856abb287263096178/spinup/algos/pytorch/ppo/ppo.py#L246 line 239ish
+    clipped = tf.math.logical_or(tf.math.greater(ratio, 1 + policy_clip_ratio),
+                                 tf.math.less(ratio, 1 - policy_clip_ratio))
+    clipped = tf.cast(clipped, dtype=tf.float32)
+    clip_frac = tf.math.reduce_mean(clipped)
+
+    # PPO early stopping as implemented in baselines
+    approx_kl = tf.math.reduce_mean(log_probs_old - log_probs_new)
+
+    # collect entropy because why not. If this keeps growing we might have a too small memory and too smal batchsize
+    entropy = dist.entropy()
+    entropy = tf.reduce_mean(entropy)
+
+    return loss_actor, approx_kl, entropy, clip_frac
+
+def apply_gradients_to_model(model, gratient_tape, loss, g_grad_norm=None):
+    actor_vars = model.trainable_variables
+    actor_grads = gratient_tape.gradient(loss, actor_vars)
+    if g_grad_norm is not None:
+        actor_grads, _ = tf.clip_by_global_norm(actor_grads, g_grad_norm)
+    model.optimizer.apply_gradients(zip(actor_grads, actor_vars))
+
+    return model
 
 def tb_plotter(data_list, summary_writer):
     with summary_writer.as_default():
@@ -196,6 +318,14 @@ async def robust_argmax(tensor):
     max_value_idxs = tf.where(tf.math.equal(max_value, tf.squeeze(tensor, axis=0)))
     random_max_value_idx = tf.random.shuffle(max_value_idxs)[0]
     return random_max_value_idx
+
+async def smart_squeeze(x, remaining_dims=1): #X is a tensorflow tensor
+    cardinality = len(x.get_shape())
+    assert cardinality >= remaining_dims, "cannot squeeze below 0, pls check your dims goal"
+    to_be_reduced = np.arange(cardinality - remaining_dims, dtype=int).tolist()
+    x = tf.squeeze(x, axis=to_be_reduced)
+    x = x.numpy().tolist()
+    return x
 
 class EarlyStopper:
     def __init__(self, patience=30, tolerance=1e-8):
@@ -437,7 +567,26 @@ class PPO_ExperienceReplay:
         else:
             return False
 
-    async def calculate_advantage(self, gamma=0.99, gae_lambda=0.95, normalize=True):
+    #ToDo: check the weighting math
+    async def calculate_explained_variance(self):
+        explained_variance_buffer = []
+        num_entries = []
+        for episode in self.buffer:
+            V_theta = [step['values'] for step in self.buffer[episode]]
+            G_traj = [step['returns'] for step in self.buffer[episode]]
+
+            assert len(V_theta) == len(G_traj), "the number of values and returns is not equal, cannot calculate_explained_variance"
+            explained_var_episode = _explained_variance(ypred=np.array(V_theta),
+                                                y=np.array(G_traj))
+            num_episode_entries = len(V_theta)
+            num_entries.append(num_episode_entries)
+            explained_variance_buffer.append(explained_var_episode)
+        total_entries = sum(num_entries)
+        mean_explained_variance = sum([(var*weight)/total_entries for [var, weight] in zip(explained_variance_buffer, num_entries)])
+
+        return mean_explained_variance
+
+    async def calculate_advantage(self, gamma=0.99, gae_lambda=0.95):
         for episode in self.buffer:
             # self.buffer = normalize_buffer_entry(self.buffer, key='rewards')
 
@@ -456,50 +605,13 @@ class PPO_ExperienceReplay:
                 else:
                     G[t] = r[t] + gamma*G[t+1]
                     delta_t = r[t] + gamma*V[t+1] - V[t]
-                    A[t] = delta_t - gamma*gae_lambda*A[t+1]
+                    A[t] = delta_t + gamma*gae_lambda*A[t+1]
 
             A = A[:len(r)]
             for t in range(len(r)):
                 self.buffer[episode][t]['advantages'] = A[t]
                 self.buffer[episode][t]['returns'] = G[t]
                 self.buffer[episode][t]['v_target'] = A[t] + V[t]
-
-        #normalize advantage:
-        # if normalize:
-        #    self.buffer = normalize_buffer_entry(self.buffer, key='advantages')
-        #ToDo: do some research if normalizing rewards here is useful
-        #ToDo: figure out if we want to normalize this BEFORE calculating v_target or after?
-
-        # for episode in self.buffer:
-        #     V_episode = [step['values'] for step in self.buffer[episode]]
-        #     V_pseudo_terminal = V_episode[-1]
-        #
-        #     r_episode = [step['rewards'] for step in self.buffer[episode]]
-        #     r_episode.append(V_pseudo_terminal)
-        #     r_episode_array = np.array(r_episode)
-        #
-        #     G_episode = discount_cumsum(r_episode_array, gamma)[:-1]
-        #     for t in range(len(G_episode)):
-        #         self.buffer[episode][t]['returns'] = G_episode[t]
-        #
-        # # self.buffer = normalize_buffer_entry(self.buffer, key='rewards')
-        # for episode in self.buffer: #because we need to calculate those separately!
-        #     V_episode = [step['values'] for step in self.buffer[episode]]
-        #     V_pseudo_terminal = V_episode[-1]
-        #     V_episode.append(V_pseudo_terminal)
-        #     V_episode = np.array(V_episode)
-        #
-        #     r_episode = [step['rewards'] for step in self.buffer[episode]]
-        #     r_episode.append(V_pseudo_terminal)
-        #     r_episode = np.array(r_episode)
-        #
-        #     deltas = (r_episode[:-1] ) + gamma * V_episode[1:] - V_episode[:-1]
-        #     A_eisode = discount_cumsum(deltas, gamma * gae_lambda)
-        #     A_eisode = A_eisode.tolist()
-        #     for t in range(len(A_eisode)):
-        #         self.buffer[episode][t]['advantages'] = A_eisode[t]
-
-
 
         return True
 
