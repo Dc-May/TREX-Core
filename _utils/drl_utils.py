@@ -65,12 +65,12 @@ def build_hidden(internal_signal, inputs, outputs, hidden_actor=[32,32,32], type
 
     return internal_signal, inputs, outputs, initial_states_dummy
 
-def critic_head(internal_signal):
+def value_head(internal_signal, name='ValueHead'):
     initializer = k.initializers.Orthogonal()
     value = k.layers.Dense(1,
                            activation=None, #ToDo: test tanh vs None
                            kernel_initializer=initializer,
-                           name='ValueHead')(internal_signal)
+                           name=name)(internal_signal)
     return value
 
 def actor_head(internal_signal, num_actions):
@@ -83,7 +83,7 @@ def actor_head(internal_signal, num_actions):
     concentrations = tf.math.abs(concentrations) + 1e-10
     return concentrations
 
-def build_shared_actor_critic(num_inputs=4, num_actions=2, hidden=[32, 32, 32], model_type='FFNN'):
+def build_shared_actor_critic(num_inputs=4, num_actions=2, hidden=[32, 32, 32], model_type='FFNN', aux_losses=[]):
 
     inputs = {}
     outputs = {}
@@ -100,8 +100,12 @@ def build_shared_actor_critic(num_inputs=4, num_actions=2, hidden=[32, 32, 32], 
     outputs['pi'] = concentrations
 
     #value_head
-    value = critic_head(internal_signal)
+    value = value_head(internal_signal, name='Value')
     outputs['value'] = value
+
+    for aux_loss in aux_losses:
+        aux_output = value_head(internal_signal, name=aux_loss)
+        outputs[aux_loss] = aux_output
 
     shared_model = k.Model(inputs=inputs, outputs=outputs)
 
@@ -113,7 +117,7 @@ def build_shared_actor_critic(num_inputs=4, num_actions=2, hidden=[32, 32, 32], 
 
     return out_dict
 
-def build_actor(num_inputs=4, num_actions=3, hidden_actor=[32], actor_type='FFNN'):
+def build_actor(num_inputs=4, num_actions=3, hidden_actor=[32], actor_type='FFNN', aux_losses=[]):
     inputs = {}
     outputs = {}
 
@@ -125,8 +129,12 @@ def build_actor(num_inputs=4, num_actions=3, hidden_actor=[32], actor_type='FFNN
 
     concentrations = actor_head(internal_signal, num_actions)
     concentrations = tf.math.abs(concentrations) + 1e-10
-
     outputs['pi'] = concentrations
+
+    for aux_loss in aux_losses:
+        aux_output = value_head(internal_signal, name=aux_loss)
+        outputs[aux_loss] = aux_output
+
     actor_model = k.Model(inputs=inputs, outputs=outputs)
 
     actor_distrib = tfp.distributions.Beta
@@ -137,7 +145,7 @@ def build_actor(num_inputs=4, num_actions=3, hidden_actor=[32], actor_type='FFNN
 
     return out_dict
 
-def build_critic(num_inputs=4, hidden_critic=[32, 32, 32], critic_type='FFNN'):
+def build_critic(num_inputs=4, hidden_critic=[32, 32, 32], critic_type='FFNN', aux_losses=[]):
     inputs = {}
     outputs = {}
     shape = (num_inputs,) if critic_type != 'GRU' else (None, num_inputs,)
@@ -146,8 +154,13 @@ def build_critic(num_inputs=4, hidden_critic=[32, 32, 32], critic_type='FFNN'):
 
     internal_signal, inputs, outputs, initial_states_dummy = build_hidden(internal_signal, inputs, outputs, hidden_critic, critic_type)
 
-    value = critic_head(internal_signal)
+    value = value_head(internal_signal, name='Value')
     outputs['value'] = value
+
+    for aux_loss in aux_losses:
+        aux_output = value_head(internal_signal, name=aux_loss)
+        outputs[aux_loss] = aux_output
+
     critic_model = k.Model(inputs=inputs, outputs=outputs)
 
     critic_dict = {'model': critic_model,
@@ -161,9 +174,11 @@ def build_actor_critic_models(**kwargs):
         actor_dict = build_actor(num_inputs=kwargs['num_inputs'],
                                   num_actions=kwargs['num_actions'],
                                   hidden_actor=kwargs['hidden_actor'],
+                                    aux_losses = kwargs['aux_losses'],
                                   actor_type=kwargs['actor_type'])
         critic_dict = build_critic(num_inputs=kwargs['num_inputs'],
                                   hidden_critic=kwargs['hidden_critic'],
+                                   aux_losses=kwargs['aux_losses'],
                                   critic_type=kwargs['critic_type'])
 
         return actor_dict, critic_dict
@@ -171,13 +186,28 @@ def build_actor_critic_models(**kwargs):
     else:
         actor_critic_dict = build_shared_actor_critic(num_inputs=kwargs['num_inputs'],
                                                       num_actions=kwargs['num_actions'],
+                                                      aux_losses=kwargs['aux_losses'],
                                                       hidden=kwargs['hidden_actor_critic'],
                                                       model_type=kwargs['actor_critic_type'])
         return actor_critic_dict
 
-def calculate_critic_loss( inputs, V_target, critic_model, burn_in=None):
-    critic_outputs = critic_model(inputs)
-    Vs = critic_outputs.pop('value')
+def calculate_aux_losses(theta_out, aux_loss_targets, burn_in=None):
+    aux_losses = []
+    for aux_loss in aux_loss_targets:
+        aux_loss_target = aux_loss_targets[aux_loss]
+        theta_out_aux_loss = theta_out.pop(aux_loss)
+        if burn_in is not None:
+            if burn_in > 0:  # discard unwanted stages
+                aux_loss_target = aux_loss_target[:, burn_in:]
+                theta_out_aux_loss = theta_out_aux_loss[:, burn_in:]
+
+        lin_loss = aux_loss_target - theta_out_aux_loss
+        square_loss = tf.square(lin_loss)
+        loss = tf.reduce_mean(square_loss)
+        aux_losses.append(loss)
+    return aux_losses
+def calculate_critic_loss( theta_critic_out, V_target, burn_in=None):
+    Vs = theta_critic_out.pop('value')
     Vs = tf.squeeze(Vs, axis=-1)
     if burn_in is not None:
         if burn_in > 0:  # discard unwanted stages
@@ -188,11 +218,10 @@ def calculate_critic_loss( inputs, V_target, critic_model, burn_in=None):
 
     return losses_critic
 
-def calculate_ppo_loss(actor_inputs, a_taken, log_probs_old, advantages,
-                             actor_model, actor_distribution, actionspace,
+def calculate_ppo_loss(theta_actor_out, a_taken, log_probs_old, advantages,
+                             actor_distribution, actionspace,
                              policy_clip_ratio=0.2, burn_in=None):
-    actor_outputs = actor_model(actor_inputs)
-    pi = actor_outputs.pop('pi')
+    pi = theta_actor_out.pop('pi')
     if burn_in is not None:
         if burn_in > 0:
             pi = pi[:, burn_in:, :]
@@ -394,11 +423,13 @@ def assemble_subdict_batch(list_of_dicts, entries=None): #entries being a list o
     if entries is not None:
         list_of_dicts = [list_of_dicts[entry] for entry in entries]
     for dict in list_of_dicts:
+
         for key in dict:
-            if key not in dict_of_lists:
+            if key not in dict_of_lists.keys():
                 dict_of_lists[key] = [dict[key]]
             else:
                 dict_of_lists[key].append(dict[key])
+
     return dict_of_lists
 
 class ExperienceReplayBuffer:
@@ -522,22 +553,10 @@ class PPO_ExperienceReplay:
         self.trajectory_length = trajectory_length  # trajectory length
         self.multivariate = multivariate
 
-    def add_entry(self, actions_taken, log_probs, values, observations, rewards, critic_states=None, actor_states=None, episode=0):
+    def add_entry(self, episode=0, **kwargs):
         entry = {}
-        if actions_taken is not None:
-            entry['actions_taken'] = actions_taken
-        if log_probs is not None:
-            entry['log_probs'] = log_probs
-        if values is not None:
-            entry['values'] = values
-        if observations is not None:
-            entry['observations'] = observations
-        if rewards is not None:
-            entry['rewards'] = rewards
-        if critic_states is not None:
-            entry['critic_states'] = critic_states
-        if actor_states is not None:
-            entry['actor_states'] = actor_states
+        for keyword in kwargs:
+            entry[keyword] = kwargs[keyword]
 
         if episode not in self.buffer: #ToDo: we might need to change this for asynch stuff
             self.buffer[episode] = []
@@ -649,6 +668,6 @@ class PPO_ExperienceReplay:
         for key in keys:
             batch[key] = self._fetch_buffer_entry(batch_indices,
                                                   key,
-                                                  only_first_entry= True if key == 'actor_states' or key == 'critic_states' else False)
+                                                  only_first_entry= True if key in ['actor_states', 'critic_states', 'actor_critic_states'] else False)
 
         return batch
