@@ -74,7 +74,7 @@ def __main():
     parser.add_argument('type', help='')
     parser.add_argument('--id', help='')
     parser.add_argument('--market_id', help='')
-    parser.add_argument('--host', default=socket.gethostbyname(socket.getfqdn()), help='')
+    parser.add_argument('--host', default='localhost', help='') #socket.gethostbyname(socket.getfqdn()) replaced by localhost
     parser.add_argument('--port', default=42069, help='')
     parser.add_argument('--db_path', default=None, help='')
     parser.add_argument('--trader', default=None, help='')

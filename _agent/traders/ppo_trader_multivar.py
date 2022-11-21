@@ -4,25 +4,19 @@ import importlib
 import os
 import random
 from collections import OrderedDict
+from datetime import datetime
 
 import numpy as np
 from _agent._utils.metrics import Metrics
-from _utils import utils
-from _utils.drl_utils import robust_argmax
 from _utils.drl_utils import *
 import asyncio
-from matplotlib import pyplot as plt
-import sqlalchemy
-from sqlalchemy import MetaData, Column
-import dataset
-import ast
 
-from itertools import product
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
 from tensorflow import keras as k
 import tensorflow_probability as tfp
 tf.get_logger().setLevel(3)
+
 
 async def scale_from_dist_to_action(dist_action, a_min, a_max):
     scaled_action = a_min + (dist_action * (a_max - a_min))
@@ -62,7 +56,6 @@ class Trader:
     def __init__(self, bid_price, ask_price, **kwargs):
         # Some utility parameters
         self.__participant = kwargs['trader_fns']
-        self.study_name = kwargs['study_name']
         self.status = {
             'weights_loading': False
         }
@@ -95,7 +88,8 @@ class Trader:
 
         #prepare TB functionality, to open TB use the terminal command: tensorboard --logdir <dir_path>
         cwd = os.getcwd()
-        experiment_path = os.path.join(cwd, self.study_name)
+        ppo_path =os.path.join(cwd, "PPO_experiments")
+        experiment_path = os.path.join(ppo_path, kwargs['study_name'])
         trader_path = os.path.join(experiment_path, self.__participant['id'])
         self.summary_writer = tf.summary.create_file_writer(trader_path)
 
@@ -128,7 +122,7 @@ class Trader:
         self.burn_in = kwargs['burn_in'] if 'burn_in' in kwargs else 0
         self.trajectory_length = kwargs['trajectory_length'] if 'trajectory_length' in kwargs else 1
 
-        self.experience_replay_buffer = PPO_ExperienceReplay(max_length=self.replay_buffer_length,
+        self.experience_replay_buffer = ExperienceReplay(max_length=self.replay_buffer_length,
                                                             action_types=self.actions,
                                                              multivariate=True,
                                                              trajectory_length=self.burn_in+self.trajectory_length)
@@ -157,6 +151,7 @@ class Trader:
                                                                 critic_type=self.critic_type,
                                                                 num_actions=len(self.actions),
                                                                 aux_losses=self.aux_losses,
+                                                                beta_offset=kwargs['beta_offset'],
                                                                 share_params=False)
 
 
@@ -178,6 +173,7 @@ class Trader:
                                                             actor_critic_type=self.actor_critic_type,
                                                             num_actions=len(self.actions),
                                                             aux_losses=self.aux_losses,
+                                                          beta_offset=kwargs['beta_offset'],
                                                             share_params=True)
 
             self.ppo_actor_critic = actor_critic_dict['model']
@@ -257,18 +253,12 @@ class Trader:
         setattr(self, parameter, param_value)
 
     async def post_process_obs(self):
-        timing = self.__participant['timing']
-        current_round = timing['current_round']
-        next_settle = timing['next_settle']
-        round_duration = timing['duration']
-        last_settle = timing['last_settle']
-        last_round = timing['last_round']
 
         # adjusted_timing = timing.copy()
         # adjusted_timing.pop('timezone')
         # adjusted_timing.pop('duration')
         # sorted_timing = sorted(adjusted_timing.items(), key=lambda x: x[1])
-        latest_processed_timestamp = current_round[1]
+        latest_processed_timestamp = self.current_round[1]
         reward = await self._rewards.calculate()
         if reward is None:
             await self.metrics.track('rewards', reward)
@@ -280,15 +270,15 @@ class Trader:
             # if self._rewards.type == 'net_profit':
             #ToDo: are we sure we're not moving this one step too far? we moved it one round up
             #ToDo:we'rescheduling forlast settle, we needto move the rewards
-            reward_time_offset = current_round[1] - next_settle[1] - round_duration
-            reward_timestamp = current_round[1] + 0
+            reward_time_offset = self.current_round[1] - self.next_settle[1]
+            reward_timestamp = self.current_round[1] + reward_time_offset
             self.rewards_buffer[reward_timestamp] = reward
             await self.metrics.track('rewards', reward)
             self.rewards_history.append(reward)
             latest_processed_timestamp = min(latest_processed_timestamp, reward_timestamp)
 
         # lets make sure the actions buffered are actually what we did ...
-        actions_reference_round = current_round
+        actions_reference_round = self.current_round
         if actions_reference_round[1] in self.actions_buffer:
             # - recalculate the actually taken actions from the previous round
             # - rescale them to the equivalent distribution value
@@ -329,22 +319,28 @@ class Trader:
             # do any observation and rewards post_processing
             latest_processed_timestamp = min(actions_reference_round[1], latest_processed_timestamp)
 
+        #set auxloss targets
         if len(self.aux_losses) > 0:
-            if last_round[1] not in self.observations_buffer:
+            if self.last_round[1] not in self.observations_buffer:
                 return
             else:
-                self.aux_targets_buffer[last_round[1]] = {}
+                self.aux_targets_buffer[self.last_round[1]] = {}
                 if 'generation' in self.aux_losses:
                     solar_idx = self.obs_order.index('generation')
-                    current_solar = self.observations_buffer[current_round[1]][solar_idx]
-                    self.aux_targets_buffer[last_round[1]]['generation'] = current_solar
+                    current_solar = self.observations_buffer[self.current_round[1]][solar_idx]
+                    self.aux_targets_buffer[self.current_round[1] -self.round_duration]['generation'] = current_solar
 
                 if 'load' in self.aux_losses:
                     load_idx = self.obs_order.index('load')
-                    current_load = self.observations_buffer[current_round[1]][load_idx]
-                    self.aux_targets_buffer[last_round[1]]['load'] = current_load
+                    current_load = self.observations_buffer[self.current_round[1]][load_idx]
+                    self.aux_targets_buffer[self.current_round[1] -self.round_duration]['load'] = current_load
 
-                latest_processed_timestamp = min(last_round[1], latest_processed_timestamp)
+                if 'soc' in self.aux_losses:
+                    soc_idx = self.obs_order.index('soc')
+                    current_soc = self.observations_buffer[self.current_round[1]][soc_idx]
+                    self.aux_targets_buffer[self.current_round[1] -self.round_duration]['soc'] = current_soc
+
+                latest_processed_timestamp = min(self.last_round[1], latest_processed_timestamp)
 
 
         if latest_processed_timestamp in self.actions_buffer:
@@ -357,10 +353,6 @@ class Trader:
                                     a_min=self.actions['storage']['min'],
                                     a_max=self.actions['storage']['max'])
                 self.corrected_actions_history[action].append(scaled_action)
-
-
-
-
 
         return latest_processed_timestamp
 
@@ -439,6 +431,8 @@ class Trader:
                 critic_stopper = EarlyStopper(patience=self.critic_patience)
 
         while self.train_step <= max_train_steps and not (stop_actor_training and stop_critic_training):
+            data_for_tb = []  # add to the logger
+
             keys_to_fetch = ['returns', 'observations', 'advantages', 'actions_taken', 'log_probs', 'v_target']
             if self.share_actor_critic:
                 keys_to_fetch.append('actor_critic_states')
@@ -452,11 +446,19 @@ class Trader:
 
             batch = self.experience_replay_buffer.fetch_batch(batchsize=self.batch_size, keys=keys_to_fetch) #to see the batch data structure check this method
             observations = tf.convert_to_tensor(batch['observations'], dtype=tf.float32)
+            #observations = tf.expand_dims(observations, axis=1) if len(observations.shape) <= 2 else observations
             # returns = tf.convert_to_tensor(batch['returns'], dtype=tf.float32)
             V_target = tf.convert_to_tensor(batch['v_target'])
+            #V_target = tf.expand_dims(V_target, axis=1) if len(V_target.shape) <= 2 else V_target
+
             advantages = tf.convert_to_tensor(batch['advantages'], dtype=tf.float32)
+            #advantages = tf.expand_dims(advantages, axis=1) if len(advantages.shape) <= 2 else advantages
+
             log_probs_old = tf.convert_to_tensor(batch['log_probs'], dtype=tf.float32)
+            #log_probs_old = tf.expand_dims(log_probs_old, axis=1) if len(log_probs_old.shape) <= 2 else log_probs_old
+
             a_taken = tf.convert_to_tensor(batch['actions_taken'], dtype=tf.float32)
+            #a_taken = tf.expand_dims(a_taken, axis=1) if len(a_taken.shape) <= 2 else a_taken
 
             # normalize batch advantages, https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail7
             avd_batch_mean = tf.math.reduce_mean(advantages)
@@ -499,23 +501,24 @@ class Trader:
                         aux_losses = calculate_aux_losses(theta_out=theta_out, aux_loss_targets=aux_targets, burn_in=self.burn_in)
 
 
-                        data_for_tb = [] #add to the logger
+
                         for loss in self.aux_losses:
                             idx = self.aux_losses.index(loss)
                             data_for_tb.append({'name': loss+'_loss', 'data': aux_losses[idx], 'type': 'scalar', 'step': self.train_step})
-                        tb_plotter(data_for_tb, self.summary_writer)
 
                         weighted_aux_losses = self.aux_losses_weights * tf.reduce_sum(aux_losses)
                     else:
                         weighted_aux_losses = 0
 
-                    total_loss = loss_actor + 0.5*loss_critic - self.entropy_reg*entropy + weighted_aux_losses
-                    data_for_tb = [{'name': 'total_loss', 'data': total_loss, 'type': 'scalar', 'step': self.train_step}]
-                    tb_plotter(data_for_tb, self.summary_writer)
-                self.ppo_actor_critic = apply_gradients_to_model(model=self.ppo_actor_critic,
+                    total_loss = loss_actor + 0.5*loss_critic + weighted_aux_losses - self.entropy_reg*entropy
+                    data_for_tb.append({'name': 'total_loss', 'data': total_loss, 'type': 'scalar', 'step': self.train_step})
+
+                self.ppo_actor_critic, g_norm = apply_gradients_to_model(model=self.ppo_actor_critic,
                                                           gratient_tape=tape_AC,
                                                           loss=total_loss,
                                                           g_grad_norm=self.g_grad_norm)
+                data_for_tb.append(
+                    {'name': 'global_gradient_norm', 'data': g_norm, 'type': 'scalar', 'step': self.train_step})
 
             else:
                 if not stop_critic_training:
@@ -582,14 +585,13 @@ class Trader:
                     stop_actor_training = False
 
             # log
-            data_for_tb = [{'name': 'critic_loss', 'data': loss_critic, 'type': 'scalar', 'step': self.train_step},
+            data_for_tb.extend([{'name': 'critic_loss', 'data': loss_critic, 'type': 'scalar', 'step': self.train_step},
                            {'name': 'actor_loss', 'data': loss_actor, 'type': 'scalar', 'step': self.train_step}, # Main loss, if too spiky we want to see where it comes from
                            {'name': 'approx_KLD', 'data': approx_kl, 'type': 'scalar', 'step': self.train_step}, # Distance pseudometric between old and new policy, we want this to decrease over training as this would indicate convergence
                            {'name': 'policy_clip_frac', 'data': clip_frac, 'type': 'scalar', 'step': self.train_step}, #clip fraction of the policy loss
                            {'name': 'minibatch_entropy', 'data': entropy, 'type': 'scalar', 'step': self.train_step}, # Randomness of policy, we want the differential entropy to keep dropping slowly over the course of training
 
-                           {'name': 'early_stop_actor', 'data': stop_actor_training, 'type': 'scalar', 'step': self.train_step},
-                           ]
+                           {'name': 'early_stop_actor', 'data': stop_actor_training, 'type': 'scalar', 'step': self.train_step}])
             tb_plotter(data_for_tb, self.summary_writer)
 
             self.train_step = self.train_step + 1
@@ -609,7 +611,6 @@ class Trader:
         log_prob = dist.log_prob(a_dist)
         log_prob = await smart_squeeze(log_prob, remaining_dims=1)
 
-        # entropy_proxy = -log_prob[0]
         entropy_proxy = dist.entropy()
         entropy_proxy = tf.reduce_mean(entropy_proxy)
 
@@ -624,15 +625,15 @@ class Trader:
 
         return a_scaled, log_prob, a_dist, entropy_proxy
 
-    async def _query_actor(self, shared_inputs, current_round, last_settle):
+    async def _query_actor(self, shared_inputs):
         # actor stuff
         # assemble inputs
         actor_inputs = shared_inputs.copy()
         if self.actor_type == 'GRU':
-            if current_round[1] not in self.actor_input_states_buffer: #we assume that we have just started or reset
-                self.actor_input_states_buffer[current_round[1]] = self.actor_states_dummy
+            if self.current_round[1] not in self.actor_input_states_buffer: #we assume that we have just started or reset
+                self.actor_input_states_buffer[self.current_round[1]] = self.actor_states_dummy
 
-            actor_current_states = self.actor_input_states_buffer[current_round[1]]
+            actor_current_states = self.actor_input_states_buffer[self.current_round[1]]
             for key in actor_current_states:
                 actor_inputs[key] = actor_current_states[key]
 
@@ -640,19 +641,22 @@ class Trader:
         #post process outputs
         pi_dict = actor_outputs.pop('pi')
         if self.actor_type == 'GRU':
-            states_actor_t = actor_outputs
-            self.actor_input_states_buffer[last_settle[1]] = states_actor_t
+            states_actor_t = {}
+            for key in actor_outputs:
+                if 'state' in key:
+                    states_actor_t[key] = actor_outputs[key]
+            self.actor_input_states_buffer[self.next_round[1]] = states_actor_t
 
         return pi_dict
 
-    async def _query_critic(self, shared_inputs, current_round, last_settle):
+    async def _query_critic(self, shared_inputs):
         # assemble inputs
         critic_inputs = shared_inputs.copy()
         if self.critic_type == 'GRU':
-            if current_round[1] not in self.critic_input_states_buffer: #we assume that we have just started or reset
-                self.critic_input_states_buffer[current_round[1]] = self.critic_states_dummy
+            if self.current_round[1] not in self.critic_input_states_buffer: #we assume that we have just started or reset
+                self.critic_input_states_buffer[self.current_round[1]] = self.critic_states_dummy
 
-            critic_current_states = self.critic_input_states_buffer[current_round[1]]
+            critic_current_states = self.critic_input_states_buffer[self.current_round[1]]
             for key in critic_current_states:
                 critic_inputs[key] = critic_current_states[key]
         #call critic
@@ -660,19 +664,23 @@ class Trader:
         #post process critic outputs
         V_t = critic_outputs.pop('value')
         if self.critic_type == 'GRU':
-            states_critic_t = critic_outputs
-            self.critic_input_states_buffer[last_settle[1]] = states_critic_t
+            states_critic_t = {}
+            for key in critic_outputs:
+                if 'state' in key:
+                    states_critic_t[key] = critic_outputs[key]
+            self.critic_input_states_buffer[self.next_round[1]] = states_critic_t
         # log
         V_t = tf.squeeze(V_t).numpy().tolist()
 
         return V_t
 
-    async def _query_actor_critic(self, shared_inputs, current_round, last_settle):
-        if self.actor_critic_type == 'GRU':
-            if current_round[1] not in self.actor_critic_input_states_buffer:  # we assume that we have just started or reset
-                self.actor_critic_input_states_buffer[current_round[1]] = self.actor_critic_states_dummy
+    async def _query_actor_critic(self, shared_inputs):
 
-            actor_critic_current_states = self.actor_critic_input_states_buffer[current_round[1]]
+        if self.actor_critic_type == 'GRU':
+            if self.current_round[1] not in self.actor_critic_input_states_buffer:  # we assume that we have just started or reset
+                self.actor_critic_input_states_buffer[self.current_round[1]] = self.actor_critic_states_dummy
+
+            actor_critic_current_states = self.actor_critic_input_states_buffer[self.current_round[1]]
             for key in actor_critic_current_states:
                 shared_inputs[key] = actor_critic_current_states[key]
 
@@ -682,14 +690,18 @@ class Trader:
         pi_dict = actor_critic_outputs.pop('pi')
 
         if self.actor_critic_type == 'GRU':
-            states_AC_t = actor_critic_outputs
-            self.actor_critic_input_states_buffer[last_settle[1]] = states_AC_t
+            states_AC_t = {}
+            for key in actor_critic_outputs:
+                if 'state' in key:
+                    states_AC_t[key] = actor_critic_outputs[key]
+            self.actor_critic_input_states_buffer[self.next_round[1]] = states_AC_t
 
         return pi_dict, V_t
 
-
     async def pre_process_obs(self, ts_obs):
+        # ToDo: add histograms for observations
         self.obs_order = []
+        data_for_tb = []
         # current_round = self.__participant['timing']['current_round']
         # previous_round = self.__participant['timing']['last_round']
         # next_settle = self.__participant['timing']['next_settle']
@@ -720,22 +732,48 @@ class Trader:
             else:
                 observations_t.append(next_load)
 
-        minutes = int(ts_obs[0] / 60)  # ToDo: there should be an inbuilt conversion for these formats
-        hour = int(minutes / 60)
-        day = int(hour / 24)
+        timestamp = ts_obs[0]
+        dt = datetime.fromtimestamp(ts_obs[0])
+        ts_to_minutes = 1/60  # ToDo: there should be an inbuilt conversion for these formats
+        ts_to_hour =  ts_to_minutes*(1/60)
+        ts_to_hour_in_day = ts_to_hour*(1/24)
+        ts_to_daytype = ts_to_hour_in_day * (1 / 7)
+        ts_to_day_in_year =  ts_to_hour_in_day * (1 / 365)
 
         if 'time_sin_hour' in self.observations:
+            hour_in_day = timestamp *ts_to_hour_in_day
+            time_sin_hour=np.sin(2 * np.pi *hour_in_day )
+            data_for_tb.append({'name': 'time_sin_hour', 'data': time_sin_hour, 'type': 'scalar', 'step': self.total_step})
             self.obs_order.append('time_sin_hour')
-            observations_t.append(np.sin(2 * np.pi * hour / 24))
+            observations_t.append(time_sin_hour)
         if 'time_cos_hour' in self.observations:
+            hour_in_day = timestamp * ts_to_hour_in_day
+            time_cos_hour =np.cos(2 * np.pi * hour_in_day)
             self.obs_order.append('time_cos_hour')
-            observations_t.append(np.cos(2 * np.pi * hour / 24))
+            observations_t.append(time_cos_hour)
         if 'time_sin_day' in self.observations:
+            daytype = timestamp *ts_to_daytype
+            time_sin_day=np.sin(2 * np.pi * daytype)
+            data_for_tb.append(
+                {'name': 'time_sin_day', 'data': time_sin_day, 'type': 'scalar', 'step': self.total_step})
             self.obs_order.append('time_sin_day')
-            observations_t.append(np.sin(2 * np.pi * day / 7))
+            observations_t.append(time_sin_day)
         if 'time_cos_day' in self.observations:
+            daytype = timestamp * ts_to_daytype
+            time_cos_day=np.cos(2 * np.pi * daytype)
             self.obs_order.append('time_cos_day')
-            observations_t.append(np.cos(2 * np.pi * day / 7))
+            observations_t.append(time_cos_day)
+        if 'time_sin_dayinyear' in self.observations:
+            day_in_year = timestamp *ts_to_day_in_year
+            time_sin_dayinyear = np.sin(2 * np.pi * day_in_year)
+            data_for_tb.append({'name': 'time_sin_dayinyear', 'data': time_sin_dayinyear, 'type': 'scalar', 'step': self.total_step})
+            self.obs_order.append('time_sin_dayinyear')
+            observations_t.append(time_sin_dayinyear)
+        if 'time_cos_dayinyear' in self.observations:
+            day_in_year = timestamp * ts_to_day_in_year
+            time_cos_dayinyear=np.cos(2 * np.pi * day_in_year)
+            self.obs_order.append('time_cos_dayinyear')
+            observations_t.append(time_cos_dayinyear)
 
         if 'soc' in self.observations:
             self.obs_order.append('soc')
@@ -743,42 +781,45 @@ class Trader:
             soc = storage_schedule[ts_obs]['projected_soc_end']
             observations_t.append(soc)
 
-        observations_t_numpy = np.array(observations_t)
-        #ToDo: move the observations extension to the batching process?
-        obs_t_tensor = tf.expand_dims(observations_t, axis=0)
-        obs_t_tensor = tf.expand_dims(obs_t_tensor, axis=0)
+        observations_t = np.array(observations_t)
+        obs_t_mean =np.mean(observations_t)
+        obs_t_med = np.median(observations_t)
+        #ToDo: add histograms for observations
+        data_for_tb.extend([{'name': 'obs_mean', 'data': obs_t_mean, 'type': 'scalar', 'step': self.total_step}, #These should be consistent-ish wrt to each other and not super spiky (think orders of magnitude)
+                       {'name': 'obs_median', 'data': obs_t_med, 'type': 'scalar', 'step': self.total_step},
 
 
-        #ToDo: add calculation for explained variance once Lab is back online, see https://github.com/ray-project/ray/blob/7f03368fc0f56fee478e9ac15576b626fb1103a9/rllib/utils/tf_utils.py
-        data_for_tb = [{'name': 'obs_mean', 'data': np.mean(observations_t_numpy), 'type': 'scalar', 'step': self.total_step}, #These should be consistent-ish wrt to each other and not super spiky (think orders of magnitude)
-                       {'name': 'obs_median', 'data': np.median(observations_t_numpy), 'type': 'scalar', 'step': self.total_step},
-                      ]
+                      ])
+        tb_plotter(data_for_tb, self.summary_writer)
 
-
-        return observations_t_numpy, obs_t_tensor, data_for_tb
+        return observations_t
 
     async def act(self, **kwargs):
         timing = self.__participant['timing']
-        current_round = self.__participant['timing']['current_round']
-        round_duration = self.__participant['timing']['duration']
-        next_round = (current_round[0]+round_duration, current_round[1]+round_duration)
-        last_settle = self.__participant['timing']['last_settle']
-        next_settle = self.__participant['timing']['next_settle']
-        ts_obs = next_settle
-        ts_act = next_settle
+        self.current_round = self.__participant['timing']['current_round']
+        self.round_duration = self.__participant['timing']['duration']
+        self.next_round = (self.current_round[0]+self.round_duration, self.current_round[1]+self.round_duration)
+        self.last_settle = self.__participant['timing']['last_settle']
+        self.next_settle = self.__participant['timing']['next_settle']
+        self.last_round = timing['last_round']
 
-        observations_t_numpy, obs_t_tensor, data_for_tb = await self.pre_process_obs(ts_obs)
+        ts_obs = self.last_settle
+        ts_act = self.next_settle
+
+        data_for_tb = []
+
+        observations_t = await self.pre_process_obs(ts_obs)
 
         shared_inputs = {}
-        shared_inputs['observations'] = obs_t_tensor
+        shared_inputs['observations'] = tf.expand_dims(tf.expand_dims(observations_t, axis=0), axis=0)
 
         if self.share_actor_critic:
-            pi_dict, V_t = await self._query_actor_critic(shared_inputs, current_round, next_round)
+            pi_dict, V_t = await self._query_actor_critic(shared_inputs)
         else:
             #actor stuff
-            pi_dict = await self._query_actor(shared_inputs, current_round, next_round)
+            pi_dict = await self._query_actor(shared_inputs)
             # critic stuff
-            V_t = await self._query_critic(shared_inputs, current_round, next_round)
+            V_t = await self._query_critic(shared_inputs)
 
 
         if self.teacher and np.random.random() < self.teacher_sampling_rate:
@@ -798,20 +839,20 @@ class Trader:
 
 
         # lets log the stuff needed for the replay buffer
-        self.observations_buffer[current_round[1]] = observations_t_numpy
-        self.actions_buffer[current_round[1]] = dist_action
-        self.pi_buffer[current_round[1]] = tf.squeeze(pi_dict).numpy().tolist()
-        self.log_prob_buffer[current_round[1]] = log_prob
-        self.value_buffer[current_round[1]] = V_t
+        self.observations_buffer[self.current_round[1]] = observations_t
+        self.actions_buffer[self.current_round[1]] = dist_action
+        self.pi_buffer[self.current_round[1]] = tf.squeeze(pi_dict).numpy().tolist()
+        self.log_prob_buffer[self.current_round[1]] = log_prob
+        self.value_buffer[self.current_round[1]] = V_t
 
         self.value_history.append(V_t)
-        self.observations_history.append(observations_t_numpy)
+        self.observations_history.append(observations_t)
 
-        current_generation, current_load = await self.__participant['read_profile'](current_round)
+        current_generation, current_load = await self.__participant['read_profile'](self.current_round)
         net_load_current = current_load - current_generation
         if 'storage' in self.__participant:
-            storage_schedule = await self.__participant['storage']['check_schedule'](current_round)
-            net_load_current = net_load_current + storage_schedule[current_round]['energy_scheduled']
+            storage_schedule = await self.__participant['storage']['check_schedule'](self.current_round)
+            net_load_current = net_load_current + storage_schedule[self.current_round]['energy_scheduled']
 
         self.net_load_history.append(net_load_current)
 
@@ -894,8 +935,15 @@ class Trader:
             data_for_tb.append({'name':action, 'data':self.actions_history[action], 'type':'histogram', 'step':self.gen})
             data_for_tb.append({'name':'corrected' + action, 'data':self.corrected_actions_history[action], 'type':'histogram', 'step':self.gen})
 
+        for observation in self.obs_order:
+            index = self.obs_order.index(observation)
+            obs_episode = [obs_t[index] for obs_t in self.observations_history]
+            obs_episode = np.array(obs_episode)
+            data_for_tb.append({'name': observation +'_hist', 'data':obs_episode, 'type':'histogram', 'step':self.gen})
+
         day_length = 24 #ToDo: find a way to make this auto adjust....
-        socs = np.array(self.observations_history)[:,-1]*100
+        soc_idx = self.obs_order.index('soc')
+        socs = np.array(self.observations_history)[:,soc_idx]*100
         data_for_tb.append({'name': 'SoC_during_day', 'data': socs, 'type': 'pseudo3D', 'step': self.gen, 'buckets': day_length})
 
         net_load_history = self.net_load_history - np.amin(self.net_load_history)

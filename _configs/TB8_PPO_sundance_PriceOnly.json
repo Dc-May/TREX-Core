@@ -1,0 +1,713 @@
+{
+  "version": "3.7.0",
+  "study": {
+    "name": "PriceTrading_2",
+    "description": "",
+    "start_datetime": "2015-05-31 22:0:0",
+    "start_datetime_sequence": "sequential",
+    "timezone": "America/Vancouver",
+    "days": 31,
+    "time_step_size": 3600,
+    "generations": 500,
+    "profiles_db_location": "postgresql://postgres:postgres@stargate/SunDance"
+    //      "sim_root": "/home/trex/sim/"
+  },
+  "server": {
+    "host": ""
+  },
+  "training": {
+    //   "hyperparameters": {
+    //      // "entropy_reg": {"start": 0.1, "stop": 0.01, "num": 3},
+    ////      "kl_stop": {"start": 0.1, "stop": 0.01, "num": 3},
+    ////      "actor_hidden": [[64,64], [128,128],[256, 256]],
+    ////     "warmup_actor": [true]
+    //    },
+    "curriculum": {
+    }
+    },
+    "market": {
+      "id": "",
+      "type": "MicroTE3B",
+      "close_steps": 2,
+      "grid": {
+        "price": 0.069,
+        "fee_ratio": 1.1
+      }
+    },
+    "participants": {
+
+
+        "R5": {
+"type": "Residential",
+"trader": {
+"track_metrics": true,
+"type": "ppo_trader_relative_netload",
+"bid_price": 0.14,
+"ask_price": 0.07,
+"P_max": 3000,
+//max output for bess
+"actions": [
+  "price"
+],
+// 'price', 'quantity"
+"learning": true,
+"observations": [
+  "generation",
+  "load",
+  "time_sin_hour",
+  "time_cos_hour",
+  "time_sin_day",
+  "time_cos_day",
+  "time_sin_dayinyear",
+  "time_cos_dayinyear"
+],
+"teacher": false,
+"teacher_sampling_rate": 0,
+"aux_losses": ["load", "generation"],
+"aux_losses_weights": 0.2,
+"shared_actor_critic": true,
+"use_early_stop_actor": true,
+"alpha_actor_critic": 3e-4,
+"actor_critic_type": "GRU",
+"hidden_actor_critic": [64,64],
+"policy_clip": 0.2,
+"kl_stop": 0.05,
+
+"beta_offset": true,
+
+// try with 0.1 next
+"gamma": 0.97,
+"gae_lambda": 0.97,
+"entropy_reg": 0.0,
+//Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+
+"g_grad_norm": 1.0,
+//https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+"batch_size": 128,
+// might wanna tweak the next 3
+"experience_replay_buffer_length": 1488,
+// longer might be safer, like 1440
+
+"trajectory_length": 1,
+"burn_in": 24,
+//BURN_IN >= main seasonalityof data (1day,likely)
+"max_train_steps": 180,
+"limit_actions": true,
+"reward_function": "net_profit",
+"use_synthetic_profile": "SunDance_1001230"
+},
+"load": {
+"scale": 1
+},
+"generation": {
+"scale": 1
+}
+},
+
+        "R6": {
+"type": "Residential",
+"trader": {
+"track_metrics": true,
+"type": "ppo_trader_relative_netload",
+"bid_price": 0.14,
+"ask_price": 0.07,
+"P_max": 3000,
+//max output for bess
+"actions": [
+  "price"
+],
+// 'price', 'quantity"
+"learning": true,
+"observations": [
+  "generation",
+  "load",
+  "time_sin_hour",
+  "time_cos_hour",
+  "time_sin_day",
+  "time_cos_day",
+  "time_sin_dayinyear",
+  "time_cos_dayinyear"
+],
+"teacher": false,
+"teacher_sampling_rate": 0,
+"aux_losses": ["load", "generation"],
+"aux_losses_weights": 0.2,
+"shared_actor_critic": true,
+"use_early_stop_actor": true,
+"alpha_actor_critic": 3e-4,
+"actor_critic_type": "GRU",
+"hidden_actor_critic": [64,64],
+"policy_clip": 0.2,
+"kl_stop": 0.05,
+
+"beta_offset": true,
+
+// try with 0.1 next
+"gamma": 0.97,
+"gae_lambda": 0.97,
+"entropy_reg": 0.0,
+//Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+
+"g_grad_norm": 1.0,
+//https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+"batch_size": 128,
+// might wanna tweak the next 3
+"experience_replay_buffer_length": 1488,
+// longer might be safer, like 1440
+
+"trajectory_length": 1,
+"burn_in": 24,
+//BURN_IN >= main seasonalityof data (1day,likely)
+"max_train_steps": 180,
+"limit_actions": true,
+"reward_function": "net_profit",
+"use_synthetic_profile": "SunDance_1001974"
+},
+"load": {
+"scale": 1
+},
+"generation": {
+"scale": 1
+}
+},
+
+        "R7": {
+"type": "Residential",
+"trader": {
+"track_metrics": true,
+"type": "ppo_trader_relative_netload",
+"bid_price": 0.14,
+"ask_price": 0.07,
+"P_max": 3000,
+//max output for bess
+"actions": [
+  "price"
+],
+// 'price', 'quantity"
+"learning": true,
+"observations": [
+  "generation",
+  "load",
+  "time_sin_hour",
+  "time_cos_hour",
+  "time_sin_day",
+  "time_cos_day",
+  "time_sin_dayinyear",
+  "time_cos_dayinyear"
+],
+"teacher": false,
+"teacher_sampling_rate": 0,
+"aux_losses": ["load", "generation"],
+"aux_losses_weights": 0.2,
+"shared_actor_critic": true,
+"use_early_stop_actor": true,
+"alpha_actor_critic": 3e-4,
+"actor_critic_type": "GRU",
+"hidden_actor_critic": [64,64],
+"policy_clip": 0.2,
+"kl_stop": 0.05,
+
+"beta_offset": true,
+
+// try with 0.1 next
+"gamma": 0.97,
+"gae_lambda": 0.97,
+"entropy_reg": 0.0,
+//Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+
+"g_grad_norm": 1.0,
+//https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+"batch_size": 128,
+// might wanna tweak the next 3
+"experience_replay_buffer_length": 1488,
+// longer might be safer, like 1440
+
+"trajectory_length": 1,
+"burn_in": 24,
+//BURN_IN >= main seasonalityof data (1day,likely)
+"max_train_steps": 180,
+"limit_actions": true,
+"reward_function": "net_profit",
+"use_synthetic_profile": "SunDance_100500"
+},
+"load": {
+"scale": 1
+},
+"generation": {
+"scale": 1
+}
+},
+
+        "R8": {
+"type": "Residential",
+"trader": {
+"track_metrics": true,
+"type": "ppo_trader_relative_netload",
+"bid_price": 0.14,
+"ask_price": 0.07,
+"P_max": 3000,
+//max output for bess
+"actions": [
+  "price"
+],
+// 'price', 'quantity"
+"learning": true,
+"observations": [
+  "generation",
+  "load",
+  "time_sin_hour",
+  "time_cos_hour",
+  "time_sin_day",
+  "time_cos_day",
+  "time_sin_dayinyear",
+  "time_cos_dayinyear"
+],
+"teacher": false,
+"teacher_sampling_rate": 0,
+"aux_losses": ["load", "generation"],
+"aux_losses_weights": 0.2,
+"shared_actor_critic": true,
+"use_early_stop_actor": true,
+"alpha_actor_critic": 3e-4,
+"actor_critic_type": "GRU",
+"hidden_actor_critic": [64,64],
+"policy_clip": 0.2,
+"kl_stop": 0.05,
+
+"beta_offset": true,
+
+// try with 0.1 next
+"gamma": 0.97,
+"gae_lambda": 0.97,
+"entropy_reg": 0.0,
+//Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+
+"g_grad_norm": 1.0,
+//https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+"batch_size": 128,
+// might wanna tweak the next 3
+"experience_replay_buffer_length": 1488,
+// longer might be safer, like 1440
+
+"trajectory_length": 1,
+"burn_in": 24,
+//BURN_IN >= main seasonalityof data (1day,likely)
+"max_train_steps": 180,
+"limit_actions": true,
+"reward_function": "net_profit",
+"use_synthetic_profile": "SunDance_10068"
+},
+"load": {
+"scale": 1
+},
+"generation": {
+"scale": 1
+}
+},
+
+        "R9": {
+"type": "Residential",
+"trader": {
+"track_metrics": true,
+"type": "ppo_trader_relative_netload",
+"bid_price": 0.14,
+"ask_price": 0.07,
+"P_max": 3000,
+//max output for bess
+"actions": [
+  "price"
+],
+// 'price', 'quantity"
+"learning": true,
+"observations": [
+  "generation",
+  "load",
+  "time_sin_hour",
+  "time_cos_hour",
+  "time_sin_day",
+  "time_cos_day",
+  "time_sin_dayinyear",
+  "time_cos_dayinyear"
+],
+"teacher": false,
+"teacher_sampling_rate": 0,
+"aux_losses": ["load", "generation"],
+"aux_losses_weights": 0.2,
+"shared_actor_critic": true,
+"use_early_stop_actor": true,
+"alpha_actor_critic": 3e-4,
+"actor_critic_type": "GRU",
+"hidden_actor_critic": [64,64],
+"policy_clip": 0.2,
+"kl_stop": 0.05,
+
+"beta_offset": true,
+
+// try with 0.1 next
+"gamma": 0.97,
+"gae_lambda": 0.97,
+"entropy_reg": 0.0,
+//Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+
+"g_grad_norm": 1.0,
+//https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+"batch_size": 128,
+// might wanna tweak the next 3
+"experience_replay_buffer_length": 1488,
+// longer might be safer, like 1440
+
+"trajectory_length": 1,
+"burn_in": 24,
+//BURN_IN >= main seasonalityof data (1day,likely)
+"max_train_steps": 180,
+"limit_actions": true,
+"reward_function": "net_profit",
+"use_synthetic_profile": "SunDance_10011"
+},
+"load": {
+"scale": 1
+},
+"generation": {
+"scale": 1
+}
+},
+
+        "R10": {
+"type": "Residential",
+"trader": {
+"track_metrics": true,
+"type": "ppo_trader_relative_netload",
+"bid_price": 0.14,
+"ask_price": 0.07,
+"P_max": 3000,
+//max output for bess
+"actions": [
+  "price"
+],
+// 'price', 'quantity"
+"learning": true,
+"observations": [
+  "generation",
+  "load",
+  "time_sin_hour",
+  "time_cos_hour",
+  "time_sin_day",
+  "time_cos_day",
+  "time_sin_dayinyear",
+  "time_cos_dayinyear"
+],
+"teacher": false,
+"teacher_sampling_rate": 0,
+"aux_losses": ["load", "generation"],
+"aux_losses_weights": 0.2,
+"shared_actor_critic": true,
+"use_early_stop_actor": true,
+"alpha_actor_critic": 3e-4,
+"actor_critic_type": "GRU",
+"hidden_actor_critic": [64,64],
+"policy_clip": 0.2,
+"kl_stop": 0.05,
+
+"beta_offset": true,
+
+// try with 0.1 next
+"gamma": 0.97,
+"gae_lambda": 0.97,
+"entropy_reg": 0.0,
+//Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+
+"g_grad_norm": 1.0,
+//https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+"batch_size": 128,
+// might wanna tweak the next 3
+"experience_replay_buffer_length": 1488,
+// longer might be safer, like 1440
+
+"trajectory_length": 1,
+"burn_in": 24,
+//BURN_IN >= main seasonalityof data (1day,likely)
+"max_train_steps": 180,
+"limit_actions": true,
+"reward_function": "net_profit",
+"use_synthetic_profile": "SunDance_10063"
+},
+"load": {
+"scale": 1
+},
+"generation": {
+"scale": 1
+}
+},
+
+        "R11": {
+"type": "Residential",
+"trader": {
+"track_metrics": true,
+"type": "ppo_trader_relative_netload",
+"bid_price": 0.14,
+"ask_price": 0.07,
+"P_max": 3000,
+//max output for bess
+"actions": [
+  "price"
+],
+// 'price', 'quantity"
+"learning": true,
+"observations": [
+  "generation",
+  "load",
+  "time_sin_hour",
+  "time_cos_hour",
+  "time_sin_day",
+  "time_cos_day",
+  "time_sin_dayinyear",
+  "time_cos_dayinyear"
+],
+"teacher": false,
+"teacher_sampling_rate": 0,
+"aux_losses": ["load", "generation"],
+"aux_losses_weights": 0.2,
+"shared_actor_critic": true,
+"use_early_stop_actor": true,
+"alpha_actor_critic": 3e-4,
+"actor_critic_type": "GRU",
+"hidden_actor_critic": [64,64],
+"policy_clip": 0.2,
+"kl_stop": 0.05,
+
+"beta_offset": true,
+
+// try with 0.1 next
+"gamma": 0.97,
+"gae_lambda": 0.97,
+"entropy_reg": 0.0,
+//Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+
+"g_grad_norm": 1.0,
+//https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+"batch_size": 128,
+// might wanna tweak the next 3
+"experience_replay_buffer_length": 1488,
+// longer might be safer, like 1440
+
+"trajectory_length": 1,
+"burn_in": 24,
+//BURN_IN >= main seasonalityof data (1day,likely)
+"max_train_steps": 180,
+"limit_actions": true,
+"reward_function": "net_profit",
+"use_synthetic_profile": "SunDance_100124"
+},
+"load": {
+"scale": 1
+},
+"generation": {
+"scale": 1
+}
+},
+
+        "R12": {
+"type": "Residential",
+"trader": {
+"track_metrics": true,
+"type": "ppo_trader_relative_netload",
+"bid_price": 0.14,
+"ask_price": 0.07,
+"P_max": 3000,
+//max output for bess
+"actions": [
+  "price"
+],
+// 'price', 'quantity"
+"learning": true,
+"observations": [
+  "generation",
+  "load",
+  "time_sin_hour",
+  "time_cos_hour",
+  "time_sin_day",
+  "time_cos_day",
+  "time_sin_dayinyear",
+  "time_cos_dayinyear"
+],
+"teacher": false,
+"teacher_sampling_rate": 0,
+"aux_losses": ["load", "generation"],
+"aux_losses_weights": 0.2,
+"shared_actor_critic": true,
+"use_early_stop_actor": true,
+"alpha_actor_critic": 3e-4,
+"actor_critic_type": "GRU",
+"hidden_actor_critic": [64,64],
+"policy_clip": 0.2,
+"kl_stop": 0.05,
+
+"beta_offset": true,
+
+// try with 0.1 next
+"gamma": 0.97,
+"gae_lambda": 0.97,
+"entropy_reg": 0.0,
+//Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+
+"g_grad_norm": 1.0,
+//https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+"batch_size": 128,
+// might wanna tweak the next 3
+"experience_replay_buffer_length": 1488,
+// longer might be safer, like 1440
+
+"trajectory_length": 1,
+"burn_in": 24,
+//BURN_IN >= main seasonalityof data (1day,likely)
+"max_train_steps": 180,
+"limit_actions": true,
+"reward_function": "net_profit",
+"use_synthetic_profile": "SunDance_100502"
+},
+"load": {
+"scale": 1
+},
+"generation": {
+"scale": 1
+}
+},
+
+        "R13": {
+"type": "Residential",
+"trader": {
+"track_metrics": true,
+"type": "ppo_trader_relative_netload",
+"bid_price": 0.14,
+"ask_price": 0.07,
+"P_max": 3000,
+//max output for bess
+"actions": [
+  "price"
+],
+// 'price', 'quantity"
+"learning": true,
+"observations": [
+  "generation",
+  "load",
+  "time_sin_hour",
+  "time_cos_hour",
+  "time_sin_day",
+  "time_cos_day",
+  "time_sin_dayinyear",
+  "time_cos_dayinyear"
+],
+"teacher": false,
+"teacher_sampling_rate": 0,
+"aux_losses": ["load", "generation"],
+"aux_losses_weights": 0.2,
+"shared_actor_critic": true,
+"use_early_stop_actor": true,
+"alpha_actor_critic": 3e-4,
+"actor_critic_type": "GRU",
+"hidden_actor_critic": [64,64],
+"policy_clip": 0.2,
+"kl_stop": 0.05,
+
+"beta_offset": true,
+
+// try with 0.1 next
+"gamma": 0.97,
+"gae_lambda": 0.97,
+"entropy_reg": 0.0,
+//Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+
+"g_grad_norm": 1.0,
+//https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+"batch_size": 128,
+// might wanna tweak the next 3
+"experience_replay_buffer_length": 1488,
+// longer might be safer, like 1440
+
+"trajectory_length": 1,
+"burn_in": 24,
+//BURN_IN >= main seasonalityof data (1day,likely)
+"max_train_steps": 180,
+"limit_actions": true,
+"reward_function": "net_profit",
+"use_synthetic_profile": "SunDance_1003842"
+},
+"load": {
+"scale": 1
+},
+"generation": {
+"scale": 1
+}
+},
+
+        "R14": {
+"type": "Residential",
+"trader": {
+"track_metrics": true,
+"type": "ppo_trader_relative_netload",
+"bid_price": 0.14,
+"ask_price": 0.07,
+"P_max": 3000,
+//max output for bess
+"actions": [
+  "price"
+],
+// 'price', 'quantity"
+"learning": true,
+"observations": [
+  "generation",
+  "load",
+  "time_sin_hour",
+  "time_cos_hour",
+  "time_sin_day",
+  "time_cos_day",
+  "time_sin_dayinyear",
+  "time_cos_dayinyear"
+],
+"teacher": false,
+"teacher_sampling_rate": 0,
+"aux_losses": ["load", "generation"],
+"aux_losses_weights": 0.2,
+"shared_actor_critic": true,
+"use_early_stop_actor": true,
+"alpha_actor_critic": 3e-4,
+"actor_critic_type": "GRU",
+"hidden_actor_critic": [64,64],
+"policy_clip": 0.2,
+"kl_stop": 0.05,
+
+"beta_offset": true,
+
+// try with 0.1 next
+"gamma": 0.97,
+"gae_lambda": 0.97,
+"entropy_reg": 0.0,
+//Entropy starting value, will probably need to be adjusted depending on schedule. ATM recommended to anneal from close to 1 to 1e-3
+
+"g_grad_norm": 1.0,
+//https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/, detail 11
+"batch_size": 128,
+// might wanna tweak the next 3
+"experience_replay_buffer_length": 1488,
+// longer might be safer, like 1440
+
+"trajectory_length": 1,
+"burn_in": 24,
+//BURN_IN >= main seasonalityof data (1day,likely)
+"max_train_steps": 180,
+"limit_actions": true,
+"reward_function": "net_profit",
+"use_synthetic_profile": "SunDance_1002705"
+},
+"load": {
+"scale": 1
+},
+"generation": {
+"scale": 1
+}
+}
+    }
+  }
+
+
+  

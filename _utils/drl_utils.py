@@ -11,6 +11,11 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow_probability as tfp
 
+huber =tf.keras.losses.Huber(
+    delta=1.0,
+    name='huber_loss'
+)
+
 def _explained_variance(ypred, y): #ypred and y should both be 1dim arrays
     # from https://github.com/openai/baselines/blob/52255beda5f5c8760b0ae1f676aa656bb1a61f80/baselines/common/math_util.py
     # we want this to be as close to 1 as possible, this means our critic is good
@@ -20,8 +25,8 @@ def _explained_variance(ypred, y): #ypred and y should both be 1dim arrays
     return np.nan if vary == 0 else 1 -  delta_var/ vary
 
 def build_hidden_layer(signal, type='FFNN', num_hidden=32, name='Actor', initial_state=None, initializer=k.initializers.HeNormal()):
-    sqrt2 = tf.math.sqrt(2.0)
-    initializer =k.initializers.Orthogonal(gain=sqrt2, seed=None)
+
+    initializer =k.initializers.Orthogonal(gain=tf.math.sqrt(2.0), seed=None)
 
     if type == 'FFNN':
         signal = k.layers.Dense(num_hidden,
@@ -54,6 +59,7 @@ def build_hidden(internal_signal, inputs, outputs, hidden_actor=[32,32,32], type
 
         else:
             initial_state = None
+
         internal_signal, last_state = build_hidden_layer(internal_signal,
                                        type=type,
                                        num_hidden=num_hidden_neurons,
@@ -65,25 +71,42 @@ def build_hidden(internal_signal, inputs, outputs, hidden_actor=[32,32,32], type
 
     return internal_signal, inputs, outputs, initial_states_dummy
 
-def value_head(internal_signal, name='ValueHead'):
-    initializer = k.initializers.Orthogonal()
+def value_head(internal_signal, num_hidden=[], name='ValueHead'):
+    if num_hidden != []:
+        for nbr in range(len(num_hidden)):
+            internal_signal, _ = build_hidden_layer(internal_signal,
+                                                             type='FFNN',
+                                                             num_hidden=num_hidden[nbr],
+                                                             name=name+'_hidden_' + str(nbr))
+
+    initializer = k.initializers.Orthogonal(gain=1.0)
     value = k.layers.Dense(1,
                            activation=None, #ToDo: test tanh vs None
                            kernel_initializer=initializer,
                            name=name)(internal_signal)
     return value
 
-def actor_head(internal_signal, num_actions):
+def actor_head(internal_signal, num_actions, num_hidden=[],beta_offset=False, name='ActorHead'):
+
+    if num_hidden != []:
+        for nbr in range(len(num_hidden)):
+            internal_signal, _ = build_hidden_layer(internal_signal,
+                                                             type='FFNN',
+                                                             num_hidden=num_hidden[nbr],
+                                                             name=name+'_hidden_' + str(nbr))
+
     policy_head_initializer = k.initializers.Orthogonal(gain=0.1, seed=None)
     concentrations = k.layers.Dense(2 * num_actions,
                                     activation=None,  # ToDo: test tanh vs None
                                     kernel_initializer=policy_head_initializer,
-                                    bias_initializer=k.initializers.Constant(3),
-                                    name='concentrations')(internal_signal)
-    concentrations = tf.math.abs(concentrations) + 1e-10
+                                    bias_initializer=tf.keras.initializers.RandomUniform(minval=2.8, maxval=3.2),
+                                    name=name+'concentrations')(internal_signal)
+    bias = 1.0 if beta_offset else 0.0
+    concentrations += bias
+    concentrations = tf.math.softplus(concentrations)
     return concentrations
 
-def build_shared_actor_critic(num_inputs=4, num_actions=2, hidden=[32, 32, 32], model_type='FFNN', aux_losses=[]):
+def build_shared_actor_critic(num_inputs=4, num_actions=2, hidden=[32, 32, 32], model_type='FFNN', aux_losses=[], beta_offset=True):
 
     inputs = {}
     outputs = {}
@@ -96,15 +119,15 @@ def build_shared_actor_critic(num_inputs=4, num_actions=2, hidden=[32, 32, 32], 
                                                                           hidden, model_type)
 
     #policy head
-    concentrations = actor_head(internal_signal, num_actions)
-    outputs['pi'] = concentrations
+    pi = actor_head(internal_signal, num_actions, beta_offset=beta_offset, name='Actor')
+    outputs['pi'] = pi
 
     #value_head
     value = value_head(internal_signal, name='Value')
     outputs['value'] = value
 
     for aux_loss in aux_losses:
-        aux_output = value_head(internal_signal, name=aux_loss)
+        aux_output = value_head(internal_signal, name=aux_loss,num_hidden=[])
         outputs[aux_loss] = aux_output
 
     shared_model = k.Model(inputs=inputs, outputs=outputs)
@@ -117,7 +140,7 @@ def build_shared_actor_critic(num_inputs=4, num_actions=2, hidden=[32, 32, 32], 
 
     return out_dict
 
-def build_actor(num_inputs=4, num_actions=3, hidden_actor=[32], actor_type='FFNN', aux_losses=[]):
+def build_actor(num_inputs=4, num_actions=3, hidden_actor=[32], actor_type='FFNN', aux_losses=[], beta_offset=True):
     inputs = {}
     outputs = {}
 
@@ -127,8 +150,7 @@ def build_actor(num_inputs=4, num_actions=3, hidden_actor=[32], actor_type='FFNN
 
     internal_signal,  inputs, outputs, initial_states_dummy = build_hidden(internal_signal, inputs, outputs, hidden_actor, actor_type)
 
-    concentrations = actor_head(internal_signal, num_actions)
-    concentrations = tf.math.abs(concentrations) + 1e-10
+    concentrations = actor_head(internal_signal, num_actions, beta_offset=beta_offset)
     outputs['pi'] = concentrations
 
     for aux_loss in aux_losses:
@@ -175,6 +197,7 @@ def build_actor_critic_models(**kwargs):
                                   num_actions=kwargs['num_actions'],
                                   hidden_actor=kwargs['hidden_actor'],
                                     aux_losses = kwargs['aux_losses'],
+                                 beta_offset=kwargs['beta_offset'],
                                   actor_type=kwargs['actor_type'])
         critic_dict = build_critic(num_inputs=kwargs['num_inputs'],
                                   hidden_critic=kwargs['hidden_critic'],
@@ -187,6 +210,7 @@ def build_actor_critic_models(**kwargs):
         actor_critic_dict = build_shared_actor_critic(num_inputs=kwargs['num_inputs'],
                                                       num_actions=kwargs['num_actions'],
                                                       aux_losses=kwargs['aux_losses'],
+                                                      beta_offset=kwargs['beta_offset'],
                                                       hidden=kwargs['hidden_actor_critic'],
                                                       model_type=kwargs['actor_critic_type'])
         return actor_critic_dict
@@ -206,7 +230,8 @@ def calculate_aux_losses(theta_out, aux_loss_targets, burn_in=None):
         loss = tf.reduce_mean(square_loss)
         aux_losses.append(loss)
     return aux_losses
-def calculate_critic_loss( theta_critic_out, V_target, burn_in=None):
+
+def calculate_critic_loss(theta_critic_out, V_target, burn_in=None):
     Vs = theta_critic_out.pop('value')
     Vs = tf.squeeze(Vs, axis=-1)
     if burn_in is not None:
@@ -237,8 +262,10 @@ def calculate_ppo_loss(theta_actor_out, a_taken, log_probs_old, advantages,
     #     probs = dist.prob(a_taken)
     #     print('shit')
     # This is how baselines does it
-    log_probs_new = tf.squeeze(log_probs_new)
-    log_probs_old = tf.squeeze(log_probs_old)
+    if len(log_probs_new.shape) > 2:
+        log_probs_new = tf.squeeze(log_probs_new, axis=-1)
+    if len(log_probs_old.shape) > 2:
+        log_probs_old = tf.squeeze(log_probs_old, axis=-1)
 
     ratio = tf.exp(log_probs_new - log_probs_old)  # pi(a|s) / pi_old(a|s)
 
@@ -267,11 +294,17 @@ def calculate_ppo_loss(theta_actor_out, a_taken, log_probs_old, advantages,
 def apply_gradients_to_model(model, gratient_tape, loss, g_grad_norm=None):
     actor_vars = model.trainable_variables
     actor_grads = gratient_tape.gradient(loss, actor_vars)
+    g_norm = 0
+
+    for grad in actor_grads:
+        g_norm += tf.reduce_sum(tf.square(grad**2))
+    g_norm = tf.sqrt(g_norm)
+
     if g_grad_norm is not None:
         actor_grads, _ = tf.clip_by_global_norm(actor_grads, g_grad_norm)
     model.optimizer.apply_gradients(zip(actor_grads, actor_vars))
 
-    return model
+    return model, g_norm
 
 def tb_plotter(data_list, summary_writer):
     with summary_writer.as_default():
@@ -350,11 +383,14 @@ async def robust_argmax(tensor):
 
 async def smart_squeeze(x, remaining_dims=1): #X is a tensorflow tensor
     cardinality = len(x.get_shape())
-    assert cardinality >= remaining_dims, "cannot squeeze below 0, pls check your dims goal"
-    to_be_reduced = np.arange(cardinality - remaining_dims, dtype=int).tolist()
-    x = tf.squeeze(x, axis=to_be_reduced)
-    x = x.numpy().tolist()
-    return x
+    if cardinality <= remaining_dims:
+        return x
+    else:
+        assert cardinality >= remaining_dims, "cannot squeeze below 0, pls check your dims goal"
+        to_be_reduced = np.arange(cardinality - remaining_dims, dtype=int).tolist()
+        x = tf.squeeze(x, axis=to_be_reduced)
+        x = x.numpy().tolist()
+        return x
 
 class EarlyStopper:
     def __init__(self, patience=30, tolerance=1e-8):
@@ -432,119 +468,10 @@ def assemble_subdict_batch(list_of_dicts, entries=None): #entries being a list o
 
     return dict_of_lists
 
-class ExperienceReplayBuffer:
-    def __init__(self, max_length=1e4, learn_wait=100, n_steps=1):
-        self.max_length = max_length
-        self.learn_wait = learn_wait
-        self.buffer = {} # a dict of lists, each entry is an episode which is itself a list of entries such as below
-        self.last_episode = []
-        self.n_steps = n_steps #trajectory length
-        # each entry on an episode_n_transitions looks like this
-        # entry = {   'a': None, #actions
-        #            's': None, #states
-        #            'r': None, #rewards
-        #            'episode': None #episode number
-        #            }
-
-    def add_entry(self, actions, states, rewards, episode=0, ts=None):
-        entry = {'a': actions,  # actions
-                 's': states,  # states
-                 'r': rewards,  # rewards
-                 'episode': episode,
-                 }
-
-
-        if episode not in self.buffer:
-            self.buffer[episode] = []
-        self.buffer[episode].append(entry)
-
-        self._crop_buffer()
-
-    def _get_buffer_length(self):
-        buffer_length = 0
-        for episode in self.buffer:
-            buffer_length += len(self.buffer[episode])
-        return buffer_length
-
-    def _crop_buffer(self):
-        buffer_length = self._get_buffer_length()
-        if buffer_length > self.max_length: #make sure its the right length
-            difference = buffer_length - self.max_length
-            keys = list(self.buffer.keys())
-            while difference > 0:
-                oldest_episode_length = len(self.buffer[keys[0]])
-                removed = min(oldest_episode_length, difference)
-                difference -= removed
-
-                if removed == oldest_episode_length:
-                    self.buffer.pop(keys[0])
-                    del keys[0]
-                else:
-                    self.buffer[keys[0]] = self.buffer[keys[0]][removed:]
-
-
-    def clear_buffer(self):
-        self.buffer = []
-
-    # def match_episodes(self, candidate_index, trajectory_length=1):
-    #     start = self.buffer[candidate_index]['episode']
-    #     #ToDO: implement trajectory functionality
-    #     trajectory = [self.buffer[candidate_index + i + 1]['episode'] for i  in range(trajectory_length)]
-    #     same_episode = np.equal(start, trajectory).tolist()
-
-    def fetch_batch_indices(self, batchsize):
-        weightings = []
-        buffer_length = 0
-        applicable_keys = []
-        for key in self.buffer.keys():
-            len_episode = len(self.buffer[key])
-            if len_episode > self.n_steps:
-                weightings.append(len_episode)
-                applicable_keys.append(key)
-                buffer_length += len_episode
-        weightings = [weight/buffer_length for weight in weightings]
-
-        episode_keys = np.random.choice(applicable_keys, batchsize, replace=True, p=weightings).tolist()
-        counts = Counter(episode_keys)
-        indices = []
-        for episode_key in counts:
-            if counts[episode_key] >= len(self.buffer[episode_key]):
-                replace = False
-            else:
-                replace = True
-
-            transition_indices = np.random.choice(len(self.buffer[episode_key])-self.n_steps, counts[episode_key], replace=replace).tolist()
-            for transition_index in transition_indices:
-                indices.append([episode_key, transition_index])
-
-        return indices
-
-    def should_we_learn(self):
-        if self._get_buffer_length() > self.learn_wait:
-            return True
-        else:
-            return False
-
-    def fetch_batch(self, batchsize=32, indices=None):
-
-        if indices is None:
-            indices =  self.fetch_batch_indices(batchsize)
-        rewards = []
-        for [sample_episode, trajectory_start] in indices:
-            sample_reward_trajectory = [self.buffer[sample_episode][transition]['r'] for transition in range(trajectory_start, trajectory_start+self.n_steps)]
-            rewards.append(sample_reward_trajectory)
-
-        batch = {'actions':     [self.buffer[sample_episode][transition]['a'] for [sample_episode, transition] in indices],
-                 'rewards':     np.array(rewards), # old 1 step query: [self.buffer[sample][transition]['r'] for [sample, transition] in indices],       #ToDo: this needs to change for N-step Q
-                 'states':      np.array([self.buffer[sample_episode][transition]['s'] for [sample_episode, transition] in indices]),
-                 'next_states': np.array([self.buffer[sample_episode][transition + self.n_steps]['s'] for [sample_episode, transition] in indices])
-                 }
-        return batch
-
 #ToDo:
 # in order to make this recurrent we'll need to: store states(to initialize)
 # have a length argument for the trajectory we extract
-class PPO_ExperienceReplay:
+class ExperienceReplay:
     def __init__(self, max_length=1e4, trajectory_length=1, action_types=None, multivariate=True):
         self.max_length = max_length
         self.buffer = {}  # a dict of lists, each entry is an episode which is itself a list of entries such as below

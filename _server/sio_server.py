@@ -667,7 +667,7 @@ server.register_namespace(Simulation('/simulation'))
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--host', default=socket.gethostbyname(socket.getfqdn()), help='')
+    parser.add_argument('--host', default='localhost', help='') #socket.gethostbyname(socket.getfqdn()) for localhost
     parser.add_argument('--port', default=42069, help='')
     args = parser.parse_args()
 

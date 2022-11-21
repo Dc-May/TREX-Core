@@ -9,7 +9,7 @@ import numpy as np
 from _agent._utils.metrics import Metrics
 from _utils import utils
 from _utils.drl_utils import robust_argmax
-from _utils.drl_utils import PPO_ExperienceReplay, EarlyStopper, huber, tb_plotter
+from _utils.drl_utils import tb_plotter
 import asyncio
 from matplotlib import pyplot as plt
 import sqlalchemy
@@ -63,9 +63,9 @@ class Trader:
 
         #prepare TB functionality, to open TB use the terminal command: tensorboard --logdir <dir_path>
         cwd = os.getcwd()
-        experiment_path = os.path.join(cwd, kwargs['study_name'])
+        ppo_path =os.path.join(cwd, "PPO_experiments")
+        experiment_path = os.path.join(ppo_path, kwargs['study_name'])
         trader_path = os.path.join(experiment_path, self.__participant['id'])
-
         self.summary_writer = tf.summary.create_file_writer(trader_path)
 
         # Initialize learning parameters
