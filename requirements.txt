@@ -16,3 +16,4 @@ sqlalchemy-utils
 tenacity
 tensorflow>=2.0
 websockets
+wandb

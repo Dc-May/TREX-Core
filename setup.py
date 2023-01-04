@@ -23,6 +23,7 @@ setup(
                         "tenacity",
                         "tensorflow>=2.0",
                         "websockets",
+                        "wandb"
               ],
     packages=find_packages()
     )

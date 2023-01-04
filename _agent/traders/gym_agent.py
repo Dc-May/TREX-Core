@@ -158,59 +158,6 @@ class Trader:
             avg_settlement_buy_price = settle_stats['weighted_avg_settlement_buy_price'] if 'weighted_avg_settlement_buy_price' in settle_stats else 0.1449
             observations_t.append(avg_settlement_buy_price)
 
-
-        # ToDo - Daniel - there should be an inbuilt conversion for these formats
-        timestamp = ts_obs[0]
-        dt = datetime.fromtimestamp(ts_obs[0])
-        ts_to_minutes = 1/60
-        ts_to_hour = ts_to_minutes*(1/60)
-        ts_to_hour_in_day = ts_to_hour*(1/24)
-        ts_to_daytype = ts_to_hour_in_day * (1 / 7)
-        ts_to_day_in_year = ts_to_hour_in_day * (1 / 365)
-
-        # ToDo - Daniel - get rid of ugly if loop
-        if 'time_sin_hour' in self.observation_variables:
-            self.obs_order.append('time_sin_hour')
-            hour_in_day = timestamp *ts_to_hour_in_day
-            time_sin_hour=np.sin(2 * np.pi *hour_in_day )
-            observations_t.append(time_sin_hour)
-
-        if 'time_cos_hour' in self.observation_variables:
-            self.obs_order.append('time_cos_hour')
-            hour_in_day = timestamp * ts_to_hour_in_day
-            time_cos_hour =np.cos(2 * np.pi * hour_in_day)
-            observations_t.append(time_cos_hour)
-
-        if 'time_sin_day' in self.observation_variables:
-            self.obs_order.append('time_sin_day')
-            daytype = timestamp *ts_to_daytype
-            time_sin_day=np.sin(2 * np.pi * daytype)
-            observations_t.append(time_sin_day)
-
-        if 'time_cos_day' in self.observation_variables:
-            self.obs_order.append('time_cos_day')
-            daytype = timestamp * ts_to_daytype
-            time_cos_day=np.cos(2 * np.pi * daytype)
-            observations_t.append(time_cos_day)
-
-        if 'time_sin_dayinyear' in self.observation_variables:
-            self.obs_order.append('time_sin_dayinyear')
-            day_in_year = timestamp *ts_to_day_in_year
-            time_sin_dayinyear = np.sin(2 * np.pi * day_in_year)
-            observations_t.append(time_sin_dayinyear)
-
-        if 'time_cos_dayinyear' in self.observation_variables:
-            self.obs_order.append('time_cos_dayinyear')
-            day_in_year = timestamp * ts_to_day_in_year
-            time_cos_dayinyear=np.cos(2 * np.pi * day_in_year)
-            observations_t.append(time_cos_dayinyear)
-
-        if 'soc' in self.observation_variables:
-            self.obs_order.append('soc')
-            storage_schedule = await self.__participant['storage']['check_schedule'](ts_obs)
-            soc = storage_schedule[ts_obs]['projected_soc_end']
-            observations_t.append(soc)
-
         #ToDo - Daniel & Steven - get these from special market
         if 'avg_bid_price_ls' in self.observation_variables:
             raise NotImplementedError
@@ -224,6 +171,60 @@ class Trader:
         if 'avg_ask_quantity_ls' in self.observation_variables:
             raise NotImplementedError
             self.obs_order.append('avg_bid_quantity_ls')
+
+        # ToDo - Daniel - there should be an inbuilt conversion for these formats
+        timestamp = ts_obs[0]
+        dt = datetime.fromtimestamp(ts_obs[0])
+        dt = datetime.combine(date.min, dt) - datetime.min
+        dt_seconds = dt.total_seconds()
+        ts_to_minutes = 1/60
+        ts_to_hour = ts_to_minutes*(1/60)
+        ts_to_day = ts_to_hour*(1/24)
+        ts_to_week = ts_to_day * (1 / 7)
+        ts_to_year = ts_to_day * (1 / 365)
+
+        # ToDo - Daniel - get rid of ugly if loop
+        if 'time_sin_hour' in self.observation_variables:
+            self.obs_order.append('time_sin_hour')
+            hour_in_day = timestamp *ts_to_hour
+            time_sin_hour=np.sin(2 * np.pi *hour_in_day )
+            observations_t.append(time_sin_hour)
+
+        if 'time_cos_hour' in self.observation_variables:
+            self.obs_order.append('time_cos_hour')
+            hour_in_day = timestamp * ts_to_hour
+            time_cos_hour =np.cos(2 * np.pi * hour_in_day)
+            observations_t.append(time_cos_hour)
+
+        if 'time_sin_day' in self.observation_variables:
+            self.obs_order.append('time_sin_day')
+            daytype = timestamp *ts_to_day
+            time_sin_day=np.sin(2 * np.pi * daytype)
+            observations_t.append(time_sin_day)
+
+        if 'time_cos_day' in self.observation_variables:
+            self.obs_order.append('time_cos_day')
+            daytype = timestamp * ts_to_day
+            time_cos_day=np.cos(2 * np.pi * daytype)
+            observations_t.append(time_cos_day)
+
+        if 'time_sin_dayinyear' in self.observation_variables:
+            self.obs_order.append('time_sin_year')
+            day_in_year = timestamp *ts_to_year
+            time_sin_dayinyear = np.sin(2 * np.pi * day_in_year)
+            observations_t.append(time_sin_dayinyear)
+
+        if 'time_cos_dayinyear' in self.observation_variables:
+            self.obs_order.append('time_cos_year')
+            day_in_year = timestamp * ts_to_year
+            time_cos_dayinyear=np.cos(2 * np.pi * day_in_year)
+            observations_t.append(time_cos_dayinyear)
+
+        if 'soc' in self.observation_variables:
+            self.obs_order.append('soc')
+            storage_schedule = await self.__participant['storage']['check_schedule'](ts_obs)
+            soc = storage_schedule[ts_obs]['projected_soc_end']
+            observations_t.append(soc)
 
         return observations_t
 
