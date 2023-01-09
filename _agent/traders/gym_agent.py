@@ -40,20 +40,21 @@ class Trader:
 
         ##### Setup the shared memory names based on config #####
         self.name = self.__participant['id']
-        action_list_name = self.name + "_actions"
-        observation_list_name = self.name + "_obs"
-        reward_list_name = self.name + "_reward"
+        self.action_list_name = self.name + "_actions"
+        self.observation_list_name = self.name + "_obs"
+        self.reward_list_name = self.name + "_reward"
         '''
         Shared lists get initialized on TREXENV side, so all that the agents have to do is connect to their respective 
         observation and action lists. Agents dont have to worry about making the actions pretty, they just have to send
         them into the buffer. 
         '''
-        self.shared_list_action = shared_memory.ShareableList(name=action_list_name)
-        self.shared_list_observation = shared_memory.ShareableList(name=observation_list_name)
-        self.shared_list_reward = shared_memory.ShareableList(name=reward_list_name)
-        # print('shared reward', self.shared_list_reward)
-        # print('shared action', self.shared_list_action)
-        # print('shared observation', self.shared_list_observation)
+
+        self._check_sharedmemory()
+        self.shared_list_action = shared_memory.ShareableList(name=self.action_list_name)
+        self.shared_list_observation = shared_memory.ShareableList(name=self.observation_list_name)
+        self.shared_list_reward = shared_memory.ShareableList(name=self.reward_list_name)
+
+
         #find the right default behaviors from kwargs['default_behaviors']
         self.observation_variables = kwargs['observations']
 
@@ -95,6 +96,22 @@ class Trader:
                 self.__participant['market_info'])
 
        #  print('init done')
+
+    @tenacity.retry(wait=tenacity.wait_fixed(3))
+    def _check_sharedmemory(self):
+        """
+        This method checks if all the shared memory arrays have been create by the EPYMARL process before having them
+        initialized by the gym_agents.
+        """
+
+        shared_action_list = shared_memory.ShareableList(name=self.action_list_name)
+
+        shared_observation_list = shared_memory.ShareableList(name=self.observation_list_name)
+
+        shared_reward_list = shared_memory.ShareableList(name=self.reward_list_name)
+
+        return True
+
     def __init_metrics(self):
         import sqlalchemy
         '''
@@ -302,12 +319,12 @@ class Trader:
         #if we get rewards we pass obs, etc to GYM
         # this is not the optimal way of doing this but it is going to allow us to keep everything outside of gym clean
         #ToDO: all - look for better solutions
-        # if reward is not None:
-        #     await self.obs_to_shared_memory(obs_t)
+        if reward is not None:
+            await self.obs_to_shared_memory(obs_t)
         #
-        #     await self.r_to_shared_memory(reward)
+            await self.r_to_shared_memory(reward)
         #
-        #     await self.read_action_values()
+            await self.read_action_values()
 
 
         await self.get_heuristic_actions(ts_act=ts_act)
@@ -477,7 +494,6 @@ class Trader:
         flag = False
         while not flag:
             flag = await self.check_read_flag(self.shared_list_action)
-            # print("Flag", flag)
             if flag:
                 # ToDo: Daniel or Peter - reformat this to a dictionary so every actionn gets explicitly assigned its entry
                 #read the buffer
@@ -499,14 +515,13 @@ class Trader:
             shared_list ->  shared list object to be modified
             flag -> boolean that indicates write 0 or 1. True sets 1
         """
-        print(shared_list)
 
         if flag:
             shared_list[0] = 1
-            print("Flag was set ")
+
         else:
             shared_list[0] = 0
-            print("Flag was not set")
+
 
     async def obs_to_shared_memory(self, obs):
         """
