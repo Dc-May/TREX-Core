@@ -8,7 +8,7 @@
       "timezone": "America/Vancouver",
       "days": 31,
       "time_step_size": 3600,
-      "generations": 1
+      "generations": 100
 //      "profiles_db_location": "taken from configs"
     },
 
