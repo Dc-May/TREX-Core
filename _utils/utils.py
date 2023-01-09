@@ -65,12 +65,13 @@ def process_profile(row, gen_scale=1, load_scale=1):
     if row is not None:
         # if the data has been pre-processed
         if 'generation' in row and 'consumption' in row:
-            consumption = int(round(load_scale * row['consumption'], 0))
-            generation = int(round(gen_scale * row['generation'], 0))
+            # consumption = int(round(load_scale * row['consumption'], 0)) #FixMe: Daniel on behalf of Steven, Jan9th 2023: Changed to float
+            consumption = round(load_scale * row['consumption'], 4)
+            generation = round(gen_scale * row['generation'], 4)
         else:
             # else, calculate generation and consumption on the fly
-            consumption = int(round(load_scale * (row['grid'] + row['solar+']), 0))
-            generation = int(round(gen_scale * row['solar+'], 0))
+            consumption = round(load_scale * (row['grid'] + row['solar+']), 4)
+            generation = round(gen_scale * row['solar+'], 4)
         return generation, consumption
     return 0, 0
 

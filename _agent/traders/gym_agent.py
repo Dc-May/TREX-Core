@@ -144,10 +144,11 @@ class Trader:
             self.obs_order.append('generation')
 
             if self.profile_stats:
-                avg_generation = self.profile_stats['avg_generation']
-                avg_generation = round(avg_generation, 0) #turn into W, #FixMe: once we switch to decimal W
+                avg_generation = self.profile_stats['avg_generation'] #FixMe: (Daniel, Jan9th 2023) We need to add the scaling from the config here otherwise the mean will be wrong
+                avg_generation = round(avg_generation, 4) #turn into W,
+                obs_generation = round(obs_generation, 4)
                 stddev_generation = self.profile_stats['stddev_generation']
-                z_next_generation = (obs_generation - avg_generation) / (stddev_generation + 1e-8)
+                z_next_generation = (obs_generation - avg_generation) / (stddev_generation+ 1e-8)
                 observations_t.append(z_next_generation)
             else:
                 observations_t.append(obs_generation)
@@ -156,8 +157,9 @@ class Trader:
             self.obs_order.append('load')
 
             if self.profile_stats:
-                avg_load = self.profile_stats['avg_consumption']
-                avg_load = round(avg_load, 0)  # turn into W #FixMe: once we switch to decimal W
+                avg_load = self.profile_stats['avg_consumption'] #FixMe: (Daniel, Jan9th 2023) We need to add the scaling from the config here otherwise the mean will be wrong
+                avg_load = round(avg_load, 4)  # turn into W
+                obs_load = round(obs_load, 4)
                 stddev_load = self.profile_stats['stddev_consumption']
                 z_next_load = (obs_load - avg_load) / (stddev_load + 1e-8)
                 observations_t.append(z_next_load)
@@ -190,10 +192,10 @@ class Trader:
             self.obs_order.append('avg_bid_quantity_ls')
 
         # ToDo - Daniel - there should be an inbuilt conversion for these formats
-        timestamp = ts_obs[0]
-        dt = datetime.fromtimestamp(ts_obs[0])
-        dt = datetime.combine(date.min, dt) - datetime.min
-        dt_seconds = dt.total_seconds()
+        # timestamp = ts_obs[0]
+        # dt = datetime.fromtimestamp(ts_obs[0])
+        # dt = datetime.combine(datetime.min, dt) - datetime.min
+        # dt_seconds = dt.total_seconds()
         ts_to_minutes = 1/60
         ts_to_hour = ts_to_minutes*(1/60)
         ts_to_day = ts_to_hour*(1/24)
