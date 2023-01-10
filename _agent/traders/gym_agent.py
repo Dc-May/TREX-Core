@@ -145,7 +145,8 @@ class Trader:
 
             if self.profile_stats:
                 avg_generation = self.profile_stats['avg_generation'] #FixMe: (Daniel, Jan9th 2023) We need to add the scaling from the config here otherwise the mean will be wrong
-                avg_generation = round(avg_generation, 4) #turn into W,
+                generation_scale = 0
+                avg_generation = round(avg_generation, 4) * generation_scale#turn into W,
                 obs_generation = round(obs_generation, 4)
                 stddev_generation = self.profile_stats['stddev_generation']
                 z_next_generation = (obs_generation - avg_generation) / (stddev_generation+ 1e-8)
@@ -158,7 +159,8 @@ class Trader:
 
             if self.profile_stats:
                 avg_load = self.profile_stats['avg_consumption'] #FixMe: (Daniel, Jan9th 2023) We need to add the scaling from the config here otherwise the mean will be wrong
-                avg_load = round(avg_load, 4)  # turn into W
+                load_scale = 1
+                avg_load = round(avg_load, 4)  * load_scale# turn into W
                 obs_load = round(obs_load, 4)
                 stddev_load = self.profile_stats['stddev_consumption']
                 z_next_load = (obs_load - avg_load) / (stddev_load + 1e-8)

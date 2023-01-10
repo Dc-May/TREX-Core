@@ -50,7 +50,7 @@
           },
           "learning": true,
           "observations" : ["generation", "load", "avg_settlement_sell_price", "avg_settlement_buy_price"],
-          "reward_function": "economic_advantage",
+          "reward_function": "net_profit",
           "use_synthetic_profile": "1kw_gen_1kw_load"
         },
         "load": {
