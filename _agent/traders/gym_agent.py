@@ -466,10 +466,13 @@ class Trader:
                             intepreted as boolean
             returns ->  Boolean
         """
-        if shared_list[0]:
-            return True
-        else:
-            return False
+        try:
+            if shared_list[0]:
+                return True
+            else:
+                return False
+        except:
+            print(shared_list)
 
     async def read_action_values(self):
         """

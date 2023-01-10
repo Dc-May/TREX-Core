@@ -6,9 +6,9 @@
       "start_datetime": "2015-06-01 0:0:0",
       "start_datetime_sequence": "sequential",
       "timezone": "America/Vancouver",
-      "days": 31,
+      "days": 3,
       "time_step_size": 3600,
-      "generations": 100
+      "generations": 3000
 //      "profiles_db_location": "taken from configs"
     },
 
