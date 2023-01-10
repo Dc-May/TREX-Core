@@ -373,7 +373,7 @@ class Trader:
 
         if "quantity" in self.a_t:
             quantity = self.a_t['quantity']
-            quantity = int(quantity) if quantity is not None else 0
+            quantity = quantity if quantity is not None else 0
         else:
             quantity = 0
 

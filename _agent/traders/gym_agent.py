@@ -145,8 +145,8 @@ class Trader:
 
             if self.profile_stats:
                 avg_generation = self.profile_stats['avg_generation'] #FixMe: (Daniel, Jan9th 2023) We need to add the scaling from the config here otherwise the mean will be wrong
-                generation_scale = 0
-                avg_generation = round(avg_generation, 4) * generation_scale#turn into W,
+                generation_scale = self.__participant['profile_params']['generation_scale']
+                avg_generation = round(avg_generation, 4) * generation_scale #turn into W,
                 obs_generation = round(obs_generation, 4)
                 stddev_generation = self.profile_stats['stddev_generation']
                 z_next_generation = (obs_generation - avg_generation) / (stddev_generation+ 1e-8)
@@ -159,8 +159,8 @@ class Trader:
 
             if self.profile_stats:
                 avg_load = self.profile_stats['avg_consumption'] #FixMe: (Daniel, Jan9th 2023) We need to add the scaling from the config here otherwise the mean will be wrong
-                load_scale = 1
-                avg_load = round(avg_load, 4)  * load_scale# turn into W
+                load_scale = self.__participant['profile_params']['load_scale']
+                avg_load = round(avg_load, 4)  * load_scale # turn into W
                 obs_load = round(obs_load, 4)
                 stddev_load = self.profile_stats['stddev_consumption']
                 z_next_load = (obs_load - avg_load) / (stddev_load + 1e-8)
@@ -168,36 +168,38 @@ class Trader:
             else:
                 observations_t.append(obs_load)
 
-
-        settle_stats = self.__participant["market_info"]["settle_stats"]
-        # print('settlement stats', settle_stats)
-        if 'avg_settlement_sell_price' in self.observation_variables:
-            avg_settlement_sell_price = settle_stats['weighted_avg_settlement_sell_price'] if 'weighted_avg_settlement_sell_price' in settle_stats else 0.069
-            observations_t.append(avg_settlement_sell_price)
-
-        if 'avg_settlement_buy_price' in self.observation_variables:
-            avg_settlement_buy_price = settle_stats['weighted_avg_settlement_buy_price'] if 'weighted_avg_settlement_buy_price' in settle_stats else 0.1449
-            observations_t.append(avg_settlement_buy_price)
-
         #ToDo - Daniel & Steven - get these from special market
+        settle_stats = self.__participant['market_info']['settle_stats']
         if 'avg_bid_price_ls' in self.observation_variables:
-            raise NotImplementedError
+            avg_bid_price_ls = settle_stats['weighted_avg_settlement_buy_price'] if 'weighted_avg_settlement_buy_price' in settle_stats else 0.1449  #ToDo: replace with automatic reading of config
+            observations_t.append(avg_bid_price_ls)
             self.obs_order.append('avg_bid_price_ls')
         if 'avg_ask_price_ls' in self.observation_variables:
-            raise NotImplementedError
+            avg_ask_price_ls = settle_stats['weighted_avg_settlement_sell_price'] if 'weighted_avg_settlement_sell_price' in settle_stats else 0.069 #ToDo: replace with automatic reading of config
+            observations_t.append(avg_ask_price_ls)
             self.obs_order.append('avg_ask_price_ls')
         if 'avg_bid_quantity_ls' in self.observation_variables:
-            raise NotImplementedError
+            avg_bid_quantity_ls = settle_stats['avg_settlement_quantity_buy'] if 'avg_settlement_quantity_buy' in settle_stats else 0.0
+            observations_t.append(avg_bid_quantity_ls)
             self.obs_order.append('avg_bid_quantity_ls')
         if 'avg_ask_quantity_ls' in self.observation_variables:
-            raise NotImplementedError
+            avg_ask_quantity_ls = settle_stats['avg_settlement_quantity_sell'] if 'avg_settlement_quantity_sell' in settle_stats else 0.0
+            observations_t.append(avg_ask_quantity_ls)
             self.obs_order.append('avg_bid_quantity_ls')
+        if 'total_quantity_ls' in self.observation_variables:
+            total_quantity_ls = settle_stats['total_settled_quantity'] if 'total_settled_quantity' in settle_stats else 0.0
+            observations_t.append(total_quantity_ls)
+            self.obs_order.append('total_quantity_ls')
 
+        # if total_quantity_ls > 0:
+        #    print(total_quantity_ls, 'Wh settled, at price of', settle_stats['weighted_avg_settlement_buy_price'], 'for buy and', settle_stats['weighted_avg_settlement_sell_price'], 'for sell')
         # ToDo - Daniel - there should be an inbuilt conversion for these formats
-        # timestamp = ts_obs[0]
+
+        timestamp = ts_obs[0]
         # dt = datetime.fromtimestamp(ts_obs[0])
-        # dt = datetime.combine(datetime.min, dt) - datetime.min
-        # dt_seconds = dt.total_seconds()
+        # dt_asdelta = dt - datetime.min
+        # dt_seconds = dt_asdelta.total_seconds()
+
         ts_to_minutes = 1/60
         ts_to_hour = ts_to_minutes*(1/60)
         ts_to_day = ts_to_hour*(1/24)
@@ -330,7 +332,6 @@ class Trader:
         #
             await self.read_action_values()
 
-
         await self.get_heuristic_actions(ts_act=ts_act)
         '''
         #########################################################################
@@ -423,7 +424,7 @@ class Trader:
 
         if "quantity" in self.a_t:
             quantity = self.a_t['quantity']
-            quantity = int(quantity) if quantity is not None else 0
+            quantity = quantity if quantity is not None else 0
         else:
             quantity = 0
 
@@ -528,7 +529,6 @@ class Trader:
 
         else:
             shared_list[0] = 0
-
 
     async def obs_to_shared_memory(self, obs):
         """

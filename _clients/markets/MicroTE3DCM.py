@@ -10,8 +10,8 @@ import os
 import signal
 
 import asyncio
-from _clients.markets.Grid import Market as Grid
-from _utils import db_utils, source_classifier
+from TREX_Core._clients.markets.Grid import Market as Grid
+from TREX_Core._utils import db_utils, source_classifier
 
 #TODO: THIS IS A SPECIAL MARKET FOR DANIEL C MAY
 # DO NOT USE IF YOUR NAME IS NOT DANIEL C MAY
@@ -1127,15 +1127,27 @@ class Market:
             await self.__clean_market(self.__timing['last_round'])
 
             # calculate stats for Daniel C May
-            settlements_sell = np.array(self.__round_settle_stats_buf["settlement_price_sell"])
-            settlements_buy = np.array(self.__round_settle_stats_buf["settlement_price_buy"])
+            settlements_sell = np.array(self.__round_settle_stats_buf["settlement_price_sell"]) #[price, quantity]
+            settlements_buy = np.array(self.__round_settle_stats_buf["settlement_price_buy"]) #[price, quantity]
+
+
+            total_sold_quantity = np.sum(settlements_sell[:,1]) if settlements_sell != [] else 0
+            total_bought_quantity = np.sum(settlements_buy[:,1]) if settlements_buy != [] else 0
+            assert total_sold_quantity == total_bought_quantity #make sure this is consistent
+
+            avg_settlement_quantity_sell = np.average(settlements_sell[:, 1]) if settlements_sell != [] else 0
+            avg_settlement_quantity_buy = np.average(settlements_buy[:, 1]) if settlements_buy != [] else 0
 
             weighted_avg_settlement_sell_price = np.average(settlements_sell[:, 0],
                                                                  weights=settlements_sell[:, 1]) if settlements_sell != [] else self.__grid.sell_price()
+
             weighted_avg_settlement_buy_price = np.average(settlements_buy[:, 0], weights=settlements_buy[:, 1]) if settlements_buy != [] else self.__grid.buy_price()
 
             self.__round_settle_stats = {
                 "settled_time": tuple(self.__timing['last_settle']),
+                "avg_settlement_quantity_sell": avg_settlement_quantity_sell,
+                "avg_settlement_quantity_buy": avg_settlement_quantity_buy,
+                "total_settled_quantity": total_sold_quantity,
                 "weighted_avg_settlement_sell_price": weighted_avg_settlement_sell_price,
                 "weighted_avg_settlement_buy_price": weighted_avg_settlement_buy_price
             }
