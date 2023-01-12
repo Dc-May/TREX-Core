@@ -469,13 +469,21 @@ class Trader:
                             intepreted as boolean
             returns ->  Boolean
         """
-        try:
-            if shared_list[0]:
-                return True
+
+        def tryAgain(retries=0):
+            if retries < 10:
+                try:
+                    if shared_list[0]:
+                        return True
+                    else:
+                        return False
+                except:
+                    tryAgain(retries+1)
             else:
-                return False
-        except:
-            print(shared_list)
+                raise Exception('Could not read shared list')
+
+        Flag = tryAgain()
+        return Flag
 
     async def read_action_values(self):
         """
@@ -509,7 +517,11 @@ class Trader:
                     if action in self.allowed_actions:
                         if self.allowed_actions[action]['heuristic'] == 'learned':
                             key_idx = shared_list_keys.index(action)
-                            self.a_t[action] = self.shared_list_action[key_idx]
+                            try:
+                                self.a_t[action] = self.shared_list_action[key_idx]
+                            except:
+                                raise Exception('Could not read shared list')
+
 
                 # print('actions', self.a_t[key])
                 #reset the flag
