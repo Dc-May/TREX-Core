@@ -49,8 +49,8 @@
             // "storage": {"heuristic": "greedy", "max": 3000, "min": -3000} //"learned", "greedy"
           },
           "learning": true,
-          "observations" : ["generation", "load", "avg_settlement_sell_price", "avg_settlement_buy_price","total_quantity_ls"],
-          "reward_function": "net_profit",
+          "observations" : ["generation", "load"], //"avg_settlement_sell_price", "avg_settlement_buy_price","total_quantity_ls"],
+          "reward_function": "economic_advantage",
           "use_synthetic_profile": "1kw_gen_1kw_load"
         },
         "load": {
