@@ -2,7 +2,7 @@
 
 import tenacity
 from datetime import datetime
-
+from main_utils import read_flag_x_times
 from TREX_Core._agent._utils.metrics import Metrics
 from TREX_Core._agent._utils.heuristics import PriceHeuristics, QuantityHeuristics
 import asyncio
@@ -39,11 +39,20 @@ class Trader:
         }
 
         ##### Setup the shared memory names based on config #####
+        #ToDo: find a way to add the env number here
         self.name = self.__participant['id']
-        self.action_list_name = self.name + "_actions"
-        self.observation_list_name = self.name + "_obs"
-        self.reward_list_name = self.name + "_reward"
-        '''
+        if 'env_id' in kwargs:
+            self.env_id = kwargs['env_id']
+        else:
+            self.env_id = 0
+            print('Gym agent', self.name, 'did not receive env_id, defaulting to 0')
+        self.action_list_name = self.name + str(self.env_id) +  "_actions"
+        print('Gym agent', self.name, 'action list name', self.action_list_name, flush=True)
+        self.observation_list_name = self.name + str(self.env_id) +  "_obs"
+        print('Gym agent', self.name, 'observation list name', self.observation_list_name, flush=True)
+        self.reward_list_name = self.name + str(self.env_id) +  "_reward"
+        print('Gym agent', self.name, 'reward list name', self.reward_list_name, flush=True)
+        ''' 
         Shared lists get initialized on TREXENV side, so all that the agents have to do is connect to their respective 
         observation and action lists. Agents dont have to worry about making the actions pretty, they just have to send
         them into the buffer. 
@@ -383,6 +392,7 @@ class Trader:
     async def reset(self, **kwargs):
         return True
 
+
     async def get_heuristic_actions(self, ts_act):
         act_generation, act_load = await self.__participant['read_profile'](ts_act)
         # print('Gym netloads ts_act', act_generation, act_load)
@@ -415,7 +425,7 @@ class Trader:
             we bid
             ask becomes quantity = 0, price = 0
         """
-
+        a_t = self.a_t
         if 'price' in self.a_t:
             price = self.a_t['price']
             price = round(price, 4) if price is not None else 0.0
@@ -461,30 +471,6 @@ class Trader:
 
         return actions
 
-    async def check_read_flag(self, shared_list):
-        """
-        This method checks the read flag in a shared list.
-        Parameters:
-            Shared_list -> shared list object to check, assumes that element 0 is the flag and that flag can be
-                            intepreted as boolean
-            returns ->  Boolean
-        """
-
-        def tryAgain(retries=0):
-            if retries < 10:
-                try:
-                    if shared_list[0]:
-                        return True
-                    else:
-                        return False
-                except:
-                    tryAgain(retries+1)
-            else:
-                raise Exception('Could not read shared list')
-
-        Flag = tryAgain()
-        return Flag
-
     async def read_action_values(self):
         """
         This method checks the action buffer flag and if the read flag is set, it reads the value in the buffer and stores
@@ -506,41 +492,27 @@ class Trader:
 
         """
         # check the action flag
-        shared_list_keys = ['flag', 'price', 'quantity' 'storage']
+        shared_list_keys = ['flag', 'price', 'quantity' 'storage'] #ToDO: find a way to autoimport this?
         flag = False
-        while not flag:
-            flag = await self.check_read_flag(self.shared_list_action)
+        while not flag: #wait for the flag to be set
+
+            flag = read_flag_x_times(self.shared_list_action, name='actions')
+
             if flag:
                 # ToDo: Daniel or Peter - reformat this to a dictionary so every actionn gets explicitly assigned its entry
                 #read the buffer
                 for action in shared_list_keys:
-                    if action in self.allowed_actions:
-                        if self.allowed_actions[action]['heuristic'] == 'learned':
-                            key_idx = shared_list_keys.index(action)
-                            try:
-                                self.a_t[action] = self.shared_list_action[key_idx]
-                            except:
-                                raise Exception('Could not read shared list')
-
+                    if action in self.allowed_actions and self.allowed_actions[action]['heuristic'] == 'learned':
+                        key_idx = shared_list_keys.index(action)
+                        #try:
+                        self.a_t[action] = self.shared_list_action[key_idx]
+                        #except:
+                        #    raise Exception('Could not read shared list')
 
                 # print('actions', self.a_t[key])
                 #reset the flag
 
-        await self.write_flag(self.shared_list_action, False) #this sets flag to false for the next step?
-
-    async def write_flag(self, shared_list, flag):
-        """
-        This method sets the flag
-        Parameters:
-            shared_list ->  shared list object to be modified
-            flag -> boolean that indicates write 0 or 1. True sets 1
-        """
-
-        if flag:
-            shared_list[0] = 1
-
-        else:
-            shared_list[0] = 0
+        self.shared_list_action[0] = False #set flag to false
 
     async def obs_to_shared_memory(self, obs):
         """
@@ -548,15 +520,13 @@ class Trader:
         EPYMARL to read the values.
 
         """
-
         # obs will be an array
         # pack the values of the obs array into the shares list
+
         for e, item in enumerate(obs):
             # print(e, item)
             self.shared_list_observation[e+1] = item
-
-        #set the observation flat to written
-        await self.write_flag(self.shared_list_observation,True)
+        self.shared_list_observation[0] = True #setting flag to true
 
     async def r_to_shared_memory(self, reward):
         """
@@ -564,7 +534,7 @@ class Trader:
         values.
         """
         self.shared_list_reward[-1] = reward
-        await self.write_flag(self.shared_list_reward, True)
+        self.shared_list_reward[0] = True #setting flag to true
 
 
 

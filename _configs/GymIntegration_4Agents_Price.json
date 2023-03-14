@@ -6,9 +6,9 @@
       "start_datetime": "2015-06-01 0:0:0",
       "start_datetime_sequence": "sequential",
       "timezone": "America/Vancouver",
-      "days": 3,
+      "days": 20,
       "time_step_size": 3600,
-      "generations": 3000
+      "generations": 30000
 //      "profiles_db_location": "taken from configs"
     },
 
@@ -49,7 +49,7 @@
             // "storage": {"heuristic": "greedy", "max": 3000, "min": -3000} //"learned", "greedy"
           },
           "learning": true,
-          "observations" : ["generation", "load", "avg_settlement_sell_price", "avg_settlement_buy_price"],//"total_quantity_ls"],
+          "observations" : ["generation", "load"],// "avg_settlement_sell_price", "avg_settlement_buy_price"],//"total_quantity_ls"],
           "reward_function": "economic_advantage",
           "use_synthetic_profile": "1kw_gen_1kw_load"
         },
@@ -79,7 +79,7 @@
       // "storage": {"heuristic": "greedy", "max": 3000, "min": -3000} //"learned", "greedy"
     },
     "learning": true,
-    "observations" : ["generation", "load", "avg_settlement_sell_price", "avg_settlement_buy_price"],//"total_quantity_ls"],
+    "observations" : ["generation", "load"],// "avg_settlement_sell_price", "avg_settlement_buy_price"],//"total_quantity_ls"],
     "reward_function": "economic_advantage",
     "use_synthetic_profile": "1kw_gen_1kw_load"
   },
@@ -109,7 +109,7 @@
       // "storage": {"heuristic": "greedy", "max": 3000, "min": -3000} //"learned", "greedy"
     },
     "learning": true,
-    "observations" : ["generation", "load", "avg_settlement_sell_price", "avg_settlement_buy_price"],//"total_quantity_ls"],
+    "observations" : ["generation", "load"], //"avg_settlement_sell_price", "avg_settlement_buy_price"],//"total_quantity_ls"],
     "reward_function": "economic_advantage",
     "use_synthetic_profile": "1kw_gen_1kw_load"
   },
@@ -139,7 +139,7 @@
       // "storage": {"heuristic": "greedy", "max": 3000, "min": -3000} //"learned", "greedy"
     },
     "learning": true,
-    "observations" : ["generation", "load", "avg_settlement_sell_price", "avg_settlement_buy_price"], //"total_quantity_ls"],
+    "observations" : ["generation", "load"],// "avg_settlement_sell_price", "avg_settlement_buy_price"], //"total_quantity_ls"],
     "reward_function": "economic_advantage",
     "use_synthetic_profile": "1kw_gen_1kw_load"
   },
