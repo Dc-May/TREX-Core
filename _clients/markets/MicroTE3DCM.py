@@ -8,13 +8,14 @@ from cuid import cuid
 import tenacity
 import os
 import signal
+import statistics
 
 import asyncio
 from TREX_Core._clients.markets.Grid import Market as Grid
 from TREX_Core._utils import db_utils, source_classifier
 
 #TODO: THIS IS A SPECIAL MARKET FOR DANIEL C MAY
-# DO NOT USE IF YOUR NAME IS NOT DANIEL C MAY
+# DO NOT USE IF YOUR NAME IS NOT DANIEL C MAY, This comment is made by Steven S. Zhang
 
 class Market:
     """MicroTE is a futures trading based market design for transactive energy as part of TREX
@@ -63,7 +64,7 @@ class Market:
             "settlement_price_buy": list(),
             "settlement_price_sell": list()
         }
-        self.__round_settle_stats = dict()
+        self.__round_settle_stats = {}
 
         self.__round_bid_stats_buf = {
             "price_bid": list(),
@@ -216,6 +217,8 @@ class Market:
         }
         # update start round message for Daniel C May
         # market.update(self.__round_settle_stats)
+        self.__round_settle_stats = {}
+
         for key in self.__round_settle_stats_buf:
             self.__round_settle_stats_buf[key].clear()
         for key in self.__round_ask_stats_buf:
@@ -472,8 +475,6 @@ class Market:
 
         bids = self.__open[time_delivery]['bid']
         asks = self.__open[time_delivery]['ask']
-
-        # await asyncio.get_event_loop().run_in_executor(send_request)
 
         for bid, ask, in itertools.product(bids, asks):
             if ask['price'] > bid['price']:
@@ -1138,20 +1139,53 @@ class Market:
             avg_settlement_quantity_sell = np.average(settlements_sell[:, 1]) if settlements_sell != [] else 0
             avg_settlement_quantity_buy = np.average(settlements_buy[:, 1]) if settlements_buy != [] else 0
 
-            weighted_avg_settlement_sell_price = np.average(settlements_sell[:, 0],
-                                                                 weights=settlements_sell[:, 1]) if settlements_sell != [] else self.__grid.sell_price()
+            avg_settlement_sell_price_kWh = np.average(settlements_sell[:, 0],
+                                                                 weights=settlements_sell[:, 1]) if settlements_sell != [] else self.__grid.buy_price()
 
-            weighted_avg_settlement_buy_price = np.average(settlements_buy[:, 0], weights=settlements_buy[:, 1]) if settlements_buy != [] else self.__grid.buy_price()
+            avg_settlement_buy_price_kWh = np.average(settlements_buy[:, 0], weights=settlements_buy[:, 1]) if settlements_buy != [] else self.__grid.sell_price()
 
-            self.__round_settle_stats = {
-                "settled_time": tuple(self.__timing['last_settle']),
-                "avg_settlement_quantity_sell": avg_settlement_quantity_sell,
-                "avg_settlement_quantity_buy": avg_settlement_quantity_buy,
-                "total_settled_quantity": total_sold_quantity,
-                "weighted_avg_settlement_sell_price": weighted_avg_settlement_sell_price,
-                "weighted_avg_settlement_buy_price": weighted_avg_settlement_buy_price
-            }
+            self.__round_settle_stats = {}
+            self.__round_settle_stats["settled_time"] = tuple(self.__timing['last_settle'])
+            self.__round_settle_stats["total_settled_quantity"] = total_sold_quantity
+            self.__round_settle_stats["avg_settlement_quantity_sell"] = avg_settlement_quantity_sell
+            self.__round_settle_stats["avg_settlement_quantity_buy"] = avg_settlement_quantity_buy
+            self.__round_settle_stats["avg_settlement_sell_price_kWh"] = avg_settlement_sell_price_kWh
+            self.__round_settle_stats["avg_settlement_buy_price_kWh"] = avg_settlement_buy_price_kWh
 
+
+            # ask stats
+            # print(self.__round_ask_stats_buf, flush=True)
+            self.__round_settle_stats['min_ask_price'] = np.amin(self.__round_ask_stats_buf["price_ask"]) if self.__round_ask_stats_buf["price_ask"] != [] else self.__grid.buy_price()
+            self.__round_settle_stats['max_ask_price'] = np.amax(self.__round_ask_stats_buf["price_ask"]) if self.__round_ask_stats_buf["price_ask"] != [] else self.__grid.buy_price()
+            self.__round_settle_stats['avg_ask_price_kWh'] = np.average(self.__round_ask_stats_buf["price_ask"], weights=self.__round_ask_stats_buf['quantity_ask']) if self.__round_ask_stats_buf["price_ask"] != [] else self.__grid.buy_price()
+
+            self.__round_settle_stats['total_ask_quantity'] = np.sum(self.__round_ask_stats_buf["quantity_ask"]) if self.__round_ask_stats_buf["quantity_ask"] != [] else 0
+            self.__round_settle_stats['avg_ask_quantity'] = np.average(self.__round_ask_stats_buf["quantity_ask"]) if self.__round_ask_stats_buf["quantity_ask"] != [] else 0
+
+            # bid stats
+            # print(self.__round_bid_stats_buf, flush=True)
+            self.__round_settle_stats['min_bid_price'] = np.amin(self.__round_bid_stats_buf["price_bid"]) if self.__round_bid_stats_buf["price_bid"] != [] else self.__grid.sell_price()
+            self.__round_settle_stats['max_bid_price'] = np.amax(self.__round_bid_stats_buf["price_bid"]) if self.__round_bid_stats_buf["price_bid"] != [] else self.__grid.sell_price()
+            self.__round_settle_stats['avg_bid_price_kWh'] = np.average(self.__round_bid_stats_buf["price_bid"], weights=self.__round_bid_stats_buf['quantity_bid']) if self.__round_bid_stats_buf["price_bid"] != [] else self.__grid.sell_price()
+
+            self.__round_settle_stats['total_bid_quantity'] = np.sum(self.__round_bid_stats_buf["quantity_bid"]) if self.__round_bid_stats_buf["quantity_bid"] != [] else 0
+            self.__round_settle_stats['avg_bid_quantity'] = np.average(self.__round_bid_stats_buf["quantity_bid"]) if self.__round_bid_stats_buf["quantity_bid"] != [] else 0
+
+            # self.__round_settle_stats['min_' + bucket_type + '_price'] = self.__round_bid_stats_buf['min_' + bucket_type + '_price']
+            # self.__round_settle_stats['max_' + bucket_type + '_price'] = self.__round_settle_stats_buf['max_' + bucket_type + '_price']
+            # self.__round_settle_stats['total_' + bucket_type + '_quantity'] = self.__round_settle_stats_buf['total_' + bucket_type + '_quantity']
+            # self.__round_settle_stats['avg_' + bucket_type + '_quantity'] = self.__round_settle_stats_buf['avg_' + bucket_type + '_quantity']
+            # self.__round_settle_stats['avg_' + bucket_type + '_price_kWh'] = self.__round_settle_stats_buf['avg_' + bucket_type + '_price_kWh']
+            #
+            # #bid stats
+            # bucket_type = "bids"
+            # self.__round_settle_stats['min_' + bucket_type + '_price'] = self.__round_settle_stats_buf['min_' + bucket_type + '_price']
+            # self.__round_settle_stats['max_' + bucket_type + '_price'] = self.__round_settle_stats_buf['max_' + bucket_type + '_price']
+            # self.__round_settle_stats['total_' + bucket_type + '_quantity'] = self.__round_settle_stats_buf['total_' + bucket_type + '_quantity']
+            # self.__round_settle_stats['avg_' + bucket_type + '_quantity'] = self.__round_settle_stats_buf['avg_' + bucket_type + '_quantity']
+            # self.__round_settle_stats['avg_' + bucket_type + '_price_kWh'] = self.__round_settle_stats_buf['avg_' + bucket_type + '_price_kWh']
+
+            # print(self.__round_settle_stats, flush=True)
             await self.__client.emit('end_round', data="")
 
     async def loop(self):

@@ -179,26 +179,53 @@ class Trader:
 
         #ToDo - Daniel & Steven - get these from special market
         settle_stats = self.__participant['market_info']['settle_stats']
-        if 'avg_bid_price_ls' in self.observation_variables:
-            avg_bid_price_ls = settle_stats['weighted_avg_settlement_buy_price'] if 'weighted_avg_settlement_buy_price' in settle_stats else 0.1449  #ToDo: replace with automatic reading of config
-            observations_t.append(avg_bid_price_ls)
-            self.obs_order.append('avg_bid_price_ls')
-        if 'avg_ask_price_ls' in self.observation_variables:
-            avg_ask_price_ls = settle_stats['weighted_avg_settlement_sell_price'] if 'weighted_avg_settlement_sell_price' in settle_stats else 0.069 #ToDo: replace with automatic reading of config
-            observations_t.append(avg_ask_price_ls)
-            self.obs_order.append('avg_ask_price_ls')
-        if 'avg_bid_quantity_ls' in self.observation_variables:
-            avg_bid_quantity_ls = settle_stats['avg_settlement_quantity_buy'] if 'avg_settlement_quantity_buy' in settle_stats else 0.0
-            observations_t.append(avg_bid_quantity_ls)
-            self.obs_order.append('avg_bid_quantity_ls')
-        if 'avg_ask_quantity_ls' in self.observation_variables:
-            avg_ask_quantity_ls = settle_stats['avg_settlement_quantity_sell'] if 'avg_settlement_quantity_sell' in settle_stats else 0.0
-            observations_t.append(avg_ask_quantity_ls)
-            self.obs_order.append('avg_bid_quantity_ls')
-        if 'total_quantity_ls' in self.observation_variables:
-            total_quantity_ls = settle_stats['total_settled_quantity'] if 'total_settled_quantity' in settle_stats else 0.0
-            observations_t.append(total_quantity_ls)
-            self.obs_order.append('total_quantity_ls')
+
+        #get grid prices to normalize, if necessary
+        price_in_obs = ['price' in obs for obs in self.observation_variables]
+        if any(price_in_obs) and len(settle_stats) > 0:
+            # FixMe: atm we do not know if it makes sense to normalize market price based on this?
+            # FixMe: this also assumes we cannot bid/ask above grid sell/buy price
+            participant = self.__participant
+            if 'settled_time' in settle_stats:
+                ts_settle_stats = settle_stats['settled_time']
+                ts_settle_stats = str(tuple(ts_settle_stats))
+            else:
+                ts_settle_stats = None
+                raise NotImplementedError('Settle stats not available')
+
+            #FixMe: why cant we just do this?
+            # assert ts_settle_stats in participant['market_info']
+            if ts_settle_stats in participant['market_info']:
+                grid_stats = participant['market_info'][ts_settle_stats]
+                grid_sell_price = grid_stats['grid']['sell_price']
+                grid_buy_price = grid_stats['grid']['buy_price']
+                assert grid_buy_price >= grid_sell_price, 'grid buy price should be higher than grid sell price'
+            else:
+                grid_sell_price = 0.069
+                grid_buy_price = 0.1449
+
+            def normalize_price(price):
+                return (price - grid_sell_price) / (grid_buy_price - grid_sell_price)
+
+
+
+        for obs in self.observation_variables:
+            #settle stats keys:
+            # {'settled_time': [1433145600, 1433149200],
+            # 'total_settled_quantity': 0, 'avg_settlement_quantity_sell': 0, 'avg_settlement_quantity_buy': 0,
+            #  'avg_settlement_sell_price_kWh': 0.1449, 'avg_settlement_buy_price_kWh': 0.069,
+            #  'min_ask_price': 0.1449, 'max_ask_price': 0.1449, 'avg_ask_price_kWh': 0.1449,
+            #  'total_ask_quantity': 0, 'avg_ask_quantity': 0,
+            #  'min_bid_price': 0.069, 'max_bid_price': 0.069, 'avg_bid_price_kWh': 0.069,
+            #  'total_bid_quantity': 0, 'avg_bid_quantity': 0}
+
+            if obs not in ['generation', 'load'] and obs in self.__participant['market_info']['settle_stats']:
+                o_t = self.__participant['market_info']['settle_stats'][obs]
+                if 'price' in obs:
+                    o_t = normalize_price(o_t)
+
+                observations_t.append(o_t)
+                self.obs_order.append(obs)
 
         # if total_quantity_ls > 0:
         #    print(total_quantity_ls, 'Wh settled, at price of', settle_stats['weighted_avg_settlement_buy_price'], 'for buy and', settle_stats['weighted_avg_settlement_sell_price'], 'for sell')

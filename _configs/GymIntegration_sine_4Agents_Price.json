@@ -1,7 +1,7 @@
 {
   "version": "3.7.0",
   "study": {
-    "name": "Gym_test_flatProfiles",
+    "name": "Gym_test_sineProfiles",
       "description": "",
       "start_datetime": "2015-06-01 0:0:0",
       "start_datetime_sequence": "sequential",
@@ -49,9 +49,9 @@
             // "storage": {"heuristic": "greedy", "max": 3000, "min": -3000} //"learned", "greedy"
           },
           "learning": true,
-          "observations" : ["generation", "load", "avg_settlement_sell_price", "avg_settlement_buy_price", "total_quantity_ls"],
+          "observations" : ["generation", "load", "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"],
           "reward_function": "economic_advantage",
-          "use_synthetic_profile": "1kw_gen_1kw_load_square"
+          "use_synthetic_profile": "24step_1kw_gen_1kw_load_0.5offset_sine_cosine"
         },
         "load": {
           "scale": 1
@@ -79,9 +79,9 @@
       // "storage": {"heuristic": "greedy", "max": 3000, "min": -3000} //"learned", "greedy"
     },
     "learning": true,
-    "observations" : ["generation", "load", "avg_settlement_sell_price", "avg_settlement_buy_price", "total_quantity_ls"],
+    "observations" : ["generation", "load", "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"],
     "reward_function": "economic_advantage",
-    "use_synthetic_profile": "1kw_gen_1kw_load_square"
+    "use_synthetic_profile": "24step_1kw_gen_1kw_load_0.5offset_sine_cosine"
   },
   "load": {
     "scale": 1
@@ -109,9 +109,9 @@
       // "storage": {"heuristic": "greedy", "max": 3000, "min": -3000} //"learned", "greedy"
     },
     "learning": true,
-    "observations" : ["generation", "load", "avg_settlement_sell_price", "avg_settlement_buy_price", "total_quantity_ls"],
+    "observations" : ["generation", "load", "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"], // "avg_settlement_sell_price", "avg_settlement_buy_price", "total_quantity_ls"],
     "reward_function": "economic_advantage",
-    "use_synthetic_profile": "1kw_gen_1kw_load_square"
+    "use_synthetic_profile": "24step_1kw_gen_1kw_load_0.5offset_sine_cosine"
   },
   "load": {
     "scale": 0
@@ -139,9 +139,9 @@
       // "storage": {"heuristic": "greedy", "max": 3000, "min": -3000} //"learned", "greedy"
     },
     "learning": true,
-    "observations" : ["generation", "load", "avg_settlement_sell_price", "avg_settlement_buy_price", "total_quantity_ls"],
+    "observations" : ["generation", "load", "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"],
     "reward_function": "economic_advantage",
-    "use_synthetic_profile": "1kw_gen_1kw_load_square"
+    "use_synthetic_profile": "24step_1kw_gen_1kw_load_0.5offset_sine_cosine"
   },
   "load": {
     "scale": 0
