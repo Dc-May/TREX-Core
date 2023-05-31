@@ -47,11 +47,11 @@ class Trader:
             self.env_id = 0
             print('Gym agent', self.name, 'did not receive env_id, defaulting to 0')
         self.action_list_name = self.name + str(self.env_id) +  "_actions"
-        print('Gym agent', self.name, 'action list name', self.action_list_name, flush=True)
+        # print('Gym agent', self.name, 'action list name', self.action_list_name, flush=True)
         self.observation_list_name = self.name + str(self.env_id) +  "_obs"
-        print('Gym agent', self.name, 'observation list name', self.observation_list_name, flush=True)
+        # print('Gym agent', self.name, 'observation list name', self.observation_list_name, flush=True)
         self.reward_list_name = self.name + str(self.env_id) +  "_reward"
-        print('Gym agent', self.name, 'reward list name', self.reward_list_name, flush=True)
+        # print('Gym agent', self.name, 'reward list name', self.reward_list_name, flush=True)
         ''' 
         Shared lists get initialized on TREXENV side, so all that the agents have to do is connect to their respective 
         observation and action lists. Agents dont have to worry about making the actions pretty, they just have to send
