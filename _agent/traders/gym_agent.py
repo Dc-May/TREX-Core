@@ -12,6 +12,9 @@ from multiprocessing import shared_memory
 import importlib
 import numpy as np
 
+#ToDo: make all actions learnable (ask price, ask quan, bid_price, bid_quan, battery)
+#ToDo: make the agent not wait until reward is a number, just pass through!
+
 
 class Trader:
     """
@@ -30,6 +33,7 @@ class Trader:
         """
         # Some util stuffies
         # print('GOT TO THE GYM_AGENT INIT')
+        self.t_acts = 0 # number of actions taken
         self.__participant = kwargs['trader_fns']
         self.status = {
             'weights_loading': False,
@@ -73,16 +77,19 @@ class Trader:
         self.a_t = {}
         for action in kwargs['actions']:
             self.a_t[action] = None
+            # Deprecated
             if kwargs['actions'][action]['heuristic'] != 'learned':
-                heuristic = kwargs['actions'][action]['heuristic']
-                if 'price' == action:
-                    self.price_heuristic = PriceHeuristics(type=heuristic)
-                elif 'quantity' == action:
-                    self.quantity_heuristic = QuantityHeuristics(type=heuristic)
-                elif 'storage' == action:
-                    raise NotImplementedError
-                else:
-                    raise NotImplementedError
+                raise NotImplementedError('Only learned actions are supported in the gym agent. Please reassign ', action, 'to learned', flush=True)
+            # Deprecated
+            #     heuristic = kwargs['actions'][action]['heuristic']
+            #     if 'price' == action:
+            #         self.price_heuristic = PriceHeuristics(type=heuristic)
+            #     elif 'quantity' == action:
+            #         self.quantity_heuristic = QuantityHeuristics(type=heuristic)
+            #     elif 'storage' == action:
+            #         raise NotImplementedError
+            #     else:
+            #         raise NotImplementedError
 
 
         # TODO: Find out where the action space will be defined: I suspect its not here
@@ -323,6 +330,9 @@ class Trader:
         # print("in agent.act")
         ##### Initialize the actions
         # print('entered act')
+        # self.t_acts += 1
+        # print('t_acts', self.t_acts, flush=True)
+
         actions = {}
         # TODO: these are going to have to go into the obs_creation method, waiting on daniel for these
         bid_price = 0.0
@@ -350,7 +360,7 @@ class Trader:
         n_rounds_obs_to_act = (ts_obs[0] - ts_act[0])/self.round_duration
         n_rounds_obs_to_r = n_rounds_obs_to_act + n_rounds_act_to_r
         n_rounds_current_to_r = (ts_obs[0] - self.current_round[0])/self.round_duration + n_rounds_obs_to_r
-        
+
 
         obs_t = await self.pre_process_obs(ts_obs)
         # print('Agent Observations', obs_t)
@@ -361,19 +371,20 @@ class Trader:
         #if we get rewards we pass obs, etc to GYM
         # this is not the optimal way of doing this but it is going to allow us to keep everything outside of gym clean
         #ToDO: all - look for better solutions
-        if reward is not None:
-            await self.obs_to_shared_memory(obs_t)
-        #
-            await self.r_to_shared_memory(reward)
-        #
-            await self.read_action_values()
+        '''
+        #########################################################################
+        it is here that we wait for the action values to be written from Gym
+        #########################################################################
+        '''
 
-        await self.get_heuristic_actions(ts_act=ts_act)
-        '''
-        #########################################################################
-        it is here that we wait for the action values to be written from epymarl
-        #########################################################################
-        '''
+        # if reward is not None: Deprecated behavior
+        await self.write_obs_to_sml(obs_t)
+    #
+        await self.write_r_to_sml(reward)
+    #
+        await self.read_action_from_sml()
+
+        # await self.get_heuristic_actions(ts_act=ts_act) #Deprecated
         # wait for the actions to come from EPYMARL
 
         # actions come in with a set order, they will need to be split up
@@ -404,7 +415,7 @@ class Trader:
         #             'price': dollar_per_kWh
         #         }
         #     },
-        #     'asks' {  
+        #     'asks' {
         #         source: {
         #             time_interval: {
         #                 'quantity': qty,
@@ -419,27 +430,27 @@ class Trader:
     async def reset(self, **kwargs):
         return True
 
-
-    async def get_heuristic_actions(self, ts_act):
-        act_generation, act_load = await self.__participant['read_profile'](ts_act)
-        # print('Gym netloads ts_act', act_generation, act_load)
-        heuristic_info = {'load': act_load,
-                          'generation': act_generation
-                          }
-        for action in self.allowed_actions:
-            if self.allowed_actions[action]['heuristic'] !=  'learned':
-                if action == 'price':
-                    self.a_t[action] = self.price_heuristic.get_value(**heuristic_info)
-                elif action == 'quantity':
-                    self.a_t[action] = self.quantity_heuristic.get_value(**heuristic_info)
-                elif action == 'storage':
-                    raise NotImplementedError
-                else:
-                    print('did not recognize action key', action)
-                    raise NotImplementedError
-
-        # print('Gym self.a_t', self.a_t)
-        return
+    # Deprecated
+    # async def get_heuristic_actions(self, ts_act):
+    #     act_generation, act_load = await self.__participant['read_profile'](ts_act)
+    #     # print('Gym netloads ts_act', act_generation, act_load)
+    #     heuristic_info = {'load': act_load,
+    #                       'generation': act_generation
+    #                       }
+    #     for action in self.allowed_actions:
+    #         if self.allowed_actions[action]['heuristic'] !=  'learned':
+    #             if action == 'price':
+    #                 self.a_t[action] = self.price_heuristic.get_value(**heuristic_info)
+    #             elif action == 'quantity':
+    #                 self.a_t[action] = self.quantity_heuristic.get_value(**heuristic_info)
+    #             elif action == 'storage':
+    #                 raise NotImplementedError
+    #             else:
+    #                 print('did not recognize action key', action)
+    #                 raise NotImplementedError
+    #
+    #     # print('Gym self.a_t', self.a_t)
+    #     return
 
     async def decode_actions(self, ts_act):
         """
@@ -498,7 +509,7 @@ class Trader:
 
         return actions
 
-    async def read_action_values(self):
+    async def read_action_from_sml(self):
         """
         This method checks the action buffer flag and if the read flag is set, it reads the value in the buffer and stores
         them in a_t
@@ -519,29 +530,24 @@ class Trader:
 
         """
         # check the action flag
-        shared_list_keys = ['flag', 'price', 'quantity' 'storage'] #ToDO: find a way to autoimport this?
         flag = False
         while not flag: #wait for the flag to be set
 
             flag = read_flag_x_times(self.shared_list_action, name='actions')
 
             if flag:
-                # ToDo: Daniel or Peter - reformat this to a dictionary so every actionn gets explicitly assigned its entry
                 #read the buffer
-                for action in shared_list_keys:
+                for action in self.a_t:
                     if action in self.allowed_actions and self.allowed_actions[action]['heuristic'] == 'learned':
-                        key_idx = shared_list_keys.index(action)
-                        #try:
-                        self.a_t[action] = self.shared_list_action[key_idx]
-                        #except:
-                        #    raise Exception('Could not read shared list')
+                        sml_action_index = list(self.a_t.keys()).index(action) + 1 #because we need to respect the flag!
 
-                # print('actions', self.a_t[key])
-                #reset the flag
+                        self.a_t[action] = self.shared_list_action[sml_action_index]
+
+
 
         self.shared_list_action[0] = False #set flag to false
 
-    async def obs_to_shared_memory(self, obs):
+    async def write_obs_to_sml(self, obs):
         """
         This method writes the values in the observations array to the observation buffer and then sets the flag for
         EPYMARL to read the values.
@@ -549,17 +555,19 @@ class Trader:
         """
         # obs will be an array
         # pack the values of the obs array into the shares list
-
+        # FixMe: this could be brittle if execution speed becomes too fast!
         for e, item in enumerate(obs):
             # print(e, item)
-            self.shared_list_observation[e+1] = item
+            self.shared_list_observation[e+1] = item #so we respect the flag
         self.shared_list_observation[0] = True #setting flag to true
 
-    async def r_to_shared_memory(self, reward):
+    async def write_r_to_sml(self, reward):
         """
         This method writes the reward value into the rewards array and then sets the flag for EPYMARL to read the
         values.
         """
+
+        # FixMe: this could be brittle if execution speed becomes too fast!
         self.shared_list_reward[-1] = reward
         self.shared_list_reward[0] = True #setting flag to true
 

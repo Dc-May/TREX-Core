@@ -38,26 +38,26 @@
           "P_max": 3000,
           "actions": {
             "price":
-              {"heuristic": "learned", // "learned", "constant"
+              {"heuristic": "learned", // "learned"
               "max": 0.1449,
               "min":  0.069},
             "quantity":
-              {"heuristic": "net-load", //"learned", "net-load"
-                "max": "inf",
-                "min": "-inf"
+              {"heuristic": "learned", //"learned"
+                "max": 10, //"inf",
+                "min": -10, //"-inf"
               }
             // "storage": {"heuristic": "greedy", "max": 3000, "min": -3000} //"learned", "greedy"
           },
           "learning": true,
           "observations" : ["generation", "load", "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"],
-          "reward_function": "economic_advantage",
+          "reward_function": "net_profit", // "economic_advantage", "net_profit"
           "use_synthetic_profile": "24step_1kw_gen_1kw_load_0.5offset_sine_cosine"
         },
         "load": {
           "scale": 1
         },
         "generation": {
-          "scale": 0
+          "scale": 1
         }
       },
       "Buyer2": {
@@ -68,26 +68,26 @@
     "P_max": 3000,
     "actions": {
       "price":
-        {"heuristic": "learned", // "learned", "constant"
+        {"heuristic": "learned", // "learned"
         "max": 0.1449,
         "min":  0.069},
       "quantity":
-        {"heuristic": "net-load", //"learned", "net-load"
-          "max": "inf",
-          "min": "-inf"
+        {"heuristic": "learned", //"learned"
+          "max": 10, //"inf",
+          "min": -10, //"-inf"
         }
       // "storage": {"heuristic": "greedy", "max": 3000, "min": -3000} //"learned", "greedy"
     },
     "learning": true,
     "observations" : ["generation", "load", "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"],
-    "reward_function": "economic_advantage",
+    "reward_function": "net_profit", // "economic_advantage", "net_profit"
     "use_synthetic_profile": "24step_1kw_gen_1kw_load_0.5offset_sine_cosine"
   },
   "load": {
     "scale": 1
   },
   "generation": {
-    "scale": 0
+    "scale": 1
   }
 },
       "Seller1": {
@@ -98,26 +98,26 @@
     "P_max": 3000,
     "actions": {
       "price":
-        {"heuristic": "learned", // "learned", "constant"
+        {"heuristic": "learned", // "learned"
         "max": 0.1449,
         "min":  0.069},
       "quantity":
-        {"heuristic": "net-load", //"learned", "net-load"
-          "max": "inf",
-          "min": "-inf"
-        }
+          {"heuristic": "learned", //"learned"
+            "max": 10, //"inf",
+            "min": -10, //"-inf"
+          }
       // "storage": {"heuristic": "greedy", "max": 3000, "min": -3000} //"learned", "greedy"
     },
     "learning": true,
     "observations" : ["generation", "load", "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"], // "avg_settlement_sell_price", "avg_settlement_buy_price", "total_quantity_ls"],
-    "reward_function": "economic_advantage",
+    "reward_function": "net_profit", // "economic_advantage", "net_profit"
     "use_synthetic_profile": "24step_1kw_gen_1kw_load_0.5offset_sine_cosine"
   },
   "load": {
-    "scale": 0
+    "scale": 1
   },
   "generation": {
-    "scale": 1.2
+    "scale": 1
   }
 },
       "Seller2": {
@@ -128,26 +128,26 @@
     "P_max": 3000,
     "actions": {
       "price":
-        {"heuristic": "learned", // "learned", "constant"
+        {"heuristic": "learned", // "learned"
         "max": 0.1449,
         "min":  0.069},
       "quantity":
-        {"heuristic": "net-load", //"learned", "net-load"
-          "max": "inf",
-          "min": "-inf"
-        }
+          {"heuristic": "learned", //"learned"
+            "max": 10, //"inf",
+            "min": -10, //"-inf"
+          }
       // "storage": {"heuristic": "greedy", "max": 3000, "min": -3000} //"learned", "greedy"
     },
     "learning": true,
     "observations" : ["generation", "load", "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"],
-    "reward_function": "economic_advantage",
+    "reward_function": "net_profit", // "economic_advantage", "net_profit"
     "use_synthetic_profile": "24step_1kw_gen_1kw_load_0.5offset_sine_cosine"
   },
   "load": {
-    "scale": 0
+    "scale": 1
   },
   "generation": {
-    "scale": 1.2
+    "scale": 1
   }
 }
     }
