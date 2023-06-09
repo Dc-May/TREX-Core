@@ -42,16 +42,17 @@ class Trader:
         ##### Setup the shared memory names based on config #####
         #ToDo: find a way to add the env number here
         self.name = self.__participant['id']
-        if 'env_id' in kwargs:
-            self.env_id = kwargs['env_id']
-        else:
-            self.env_id = 0
-            print('Gym agent', self.name, 'did not receive env_id, defaulting to 0')
-        self.action_list_name = self.name + str(self.env_id) +  "_actions"
+
+        assert 'env_id' in kwargs, 'Expected to find env_id in kwargs, needed to connect to shared memory manager'
+        env_info = kwargs['env_id']
+        #make sure 'env_id', 'smm_hash', 'smm_address' and 'smm_port' in kwargs
+
+        env_id = kwargs['env_id']
+        self.action_list_name = self.name+'_' + str(env_id) +  '_actions'
         # print('Gym agent', self.name, 'action list name', self.action_list_name, flush=True)
-        self.observation_list_name = self.name + str(self.env_id) +  "_obs"
+        self.observation_list_name = self.name+'_' + str(env_id) +  '_obs'
         # print('Gym agent', self.name, 'observation list name', self.observation_list_name, flush=True)
-        self.reward_list_name = self.name + str(self.env_id) +  "_reward"
+        self.reward_list_name = self.name+'_' + str(env_id) +  '_reward'
         # print('Gym agent', self.name, 'reward list name', self.reward_list_name, flush=True)
         ''' 
         Shared lists get initialized on TREXENV side, so all that the agents have to do is connect to their respective 
@@ -59,10 +60,10 @@ class Trader:
         them into the buffer. 
         '''
 
-        self._check_sharedmemory()
-        self.shared_list_action = shared_memory.ShareableList(name=self.action_list_name)
-        self.shared_list_observation = shared_memory.ShareableList(name=self.observation_list_name)
-        self.shared_list_reward = shared_memory.ShareableList(name=self.reward_list_name)
+        # self._check_sharedmemory()
+        # self.shared_list_action = shared_memory.ShareableList(name=self.action_list_name)
+        #self.shared_list_observation = shared_memory.ShareableList(name=self.observation_list_name)
+        # self.shared_list_reward = shared_memory.ShareableList(name=self.reward_list_name)
 
 
         #find the right default behaviors from kwargs['default_behaviors']
@@ -150,9 +151,15 @@ class Trader:
 
         observations_t = []
         if not hasattr(self, 'profile_stats'):
-            self.profile_stats = await self.__participant['get_profile_stats']()
+            # self.profile_stats = await self.__participant['get_profile_stats']()
+            #ToDo: at some point reintroduce normalization here
+            self.profile_stats = {}
+            self.profile_stats['avg_generation'] = 0
+            self.profile_stats['stddev_generation'] = 1
 
-        #Todo: Daniel - check scales and why its fucked
+            self.profile_stats['avg_consumption'] = 0
+            self.profile_stats['stddev_consumption'] = 1
+
         if 'generation' in self.observation_variables:
             self.obs_order.append('generation')
 
@@ -162,7 +169,7 @@ class Trader:
                 avg_generation = round(avg_generation*generation_scale, 4) #turn into W,
                 obs_generation = round(obs_generation, 4)
                 stddev_generation = self.profile_stats['stddev_generation']
-                z_next_generation = (obs_generation - avg_generation) / (stddev_generation+ 1e-8)
+                z_next_generation = (obs_generation - avg_generation) / max(stddev_generation, 1e-8)
                 observations_t.append(z_next_generation)
             else:
                 observations_t.append(obs_generation)
@@ -176,7 +183,7 @@ class Trader:
                 avg_load = round(avg_load* load_scale, 4)   # turn into W
                 obs_load = round(obs_load, 4)
                 stddev_load = self.profile_stats['stddev_consumption']
-                z_next_load = (obs_load - avg_load) / (stddev_load + 1e-8)
+                z_next_load = (obs_load - avg_load) / max(stddev_load, 1e-8)
                 observations_t.append(z_next_load)
             else:
                 observations_t.append(obs_load)
@@ -527,10 +534,11 @@ class Trader:
 
         """
         # check the action flag
+        sml_actions = shared_memory.ShareableList(name=self.action_list_name)
         flag = False
         while not flag: #wait for the flag to be set
 
-            flag = read_flag_x_times(self.shared_list_action, name='actions')
+            flag = sml_actions[0]
 
             if flag:
                 #read the buffer
@@ -538,11 +546,11 @@ class Trader:
                     if action in self.allowed_actions and self.allowed_actions[action]['heuristic'] == 'learned':
                         sml_action_index = list(self.a_t.keys()).index(action) + 1 #because we need to respect the flag!
 
-                        self.a_t[action] = self.shared_list_action[sml_action_index]
+                        self.a_t[action] = sml_actions[sml_action_index]
 
 
 
-        self.shared_list_action[0] = False #set flag to false
+        sml_actions[0] = False #set flag to false
 
     async def write_obs_to_sml(self, obs):
         """
@@ -553,10 +561,11 @@ class Trader:
         # obs will be an array
         # pack the values of the obs array into the shares list
         # FixMe: this could be brittle if execution speed becomes too fast!
+        sml_obs = shared_memory.ShareableList(name=self.observation_list_name)
         for e, item in enumerate(obs):
             # print(e, item)
-            self.shared_list_observation[e+1] = item #so we respect the flag
-        self.shared_list_observation[0] = True #setting flag to true
+            sml_obs[e+1] = item #so we respect the flag
+        sml_obs[0] = True #setting flag to true
 
     async def write_r_to_sml(self, reward):
         """
@@ -565,8 +574,9 @@ class Trader:
         """
 
         # FixMe: this could be brittle if execution speed becomes too fast!
-        self.shared_list_reward[-1] = reward
-        self.shared_list_reward[0] = True #setting flag to true
+        sml_reward = shared_memory.ShareableList(name=self.reward_list_name)
+        sml_reward[1] = reward
+        sml_reward[0] = True #setting flag to
 
 
 
