@@ -38,18 +38,12 @@
           "type": "gym_agent",
           "P_max": 3000,
           "actions": {
-            "price":
-              {"heuristic": "learned", // "learned"
-              "max": 0.1449,
-              "min":  0.069},
-            "quantity":
-              {"heuristic": "learned", //"learned"
-                "max": 10, //"inf",
-                "min": -10, //"-inf"
-              },
-      "storage": {"heuristic": "learned",
-                  "max": 3000,
-                  "min": -3000} //"learned", "greedy"
+            "price_ask": {"heuristic": "learned", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+            "quantity_ask": {"heuristic": "learned", "max": 10, "min": 0}, // "learned, adjust the  max accordingly? Min need to stay at 0
+
+            "price_bid": {"heuristic": "learned", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+            "quantity_bid": {"heuristic": "learned", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
+            "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
           },
           "learning": true,
           "observations" : ["generation", "load", "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"],
@@ -63,25 +57,19 @@
           "scale": 1
         } // do not change, the generation will stay fixed at scale 1
       },
-    "Building_2": {
+      "Building_2": {
   "type": "Residential",
   "trader": {
     "track_metrics": true,
     "type": "gym_agent",
     "P_max": 3000,
     "actions": {
-      "price":
-        {"heuristic": "learned", // "learned"
-        "max": 0.1449,
-        "min":  0.069},
-      "quantity":
-        {"heuristic": "learned", //"learned"
-          "max": 10, //"inf",
-          "min": -10, //"-inf"
-        },
-      "storage": {"heuristic": "learned",
-                  "max": 3000,
-                  "min": -3000} //"learned", "greedy"
+        "price_ask": {"heuristic": "learned", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+        "quantity_ask": {"heuristic": "learned", "max": 10, "min": 0}, // "learned, adjust the  max accordingly? Min need to stay at 0
+
+        "price_bid": {"heuristic": "learned", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+        "quantity_bid": {"heuristic": "learned", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
+        "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
     },
     "learning": true,
     "observations" : ["generation", "load", "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"],
@@ -95,70 +83,84 @@
     "scale": 1
   }
 },
-    "Building_3": {
-  "type": "Residential",
-  "trader": {
-    "track_metrics": true,
-    "type": "gym_agent",
-    "P_max": 3000,
-    "actions": {
-      "price":
-        {"heuristic": "learned", // "learned"
-        "max": 0.1449,
-        "min":  0.069},
-      "quantity":
-          {"heuristic": "learned", //"learned"
-            "max": 10, //"inf",
-            "min": -10, //"-inf"
+      "Building_3": { // I'd recommend keeping the name the same as the name of the synthetic profile
+        "type": "Residential",
+        "trader": {
+          "track_metrics": true,
+          "type": "gym_agent",
+          "P_max": 3000,
+          "actions": {
+            "price_ask": {"heuristic": "learned", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+            "quantity_ask": {"heuristic": "learned", "max": 10, "min": 0}, // "learned, adjust the  max accordingly? Min need to stay at 0
+
+            "price_bid": {"heuristic": "learned", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+            "quantity_bid": {"heuristic": "learned", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
+            "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
           },
-      "storage": {"heuristic": "learned",
-                  "max": 3000,
-                  "min": -3000} //"learned", "greedy"
-    },
-    "learning": true,
-    "observations" : ["generation", "load", "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"], // "avg_settlement_sell_price", "avg_settlement_buy_price", "total_quantity_ls"],
-    "reward_function": "net_profit", // "economic_advantage", "net_profit"
-    "use_synthetic_profile": "Building_3"
-  },
-  "load": {
-    "scale": 1
-  },
-  "generation": {
-    "scale": 1
-  }
-},
-    "Building_4": {
-  "type": "Residential",
-  "trader": {
-    "track_metrics": true,
-    "type": "gym_agent",
-    "P_max": 3000,
-    "actions": {
-      "price":
-        {"heuristic": "learned", // "learned"
-        "max": 0.1449,
-        "min":  0.069},
-      "quantity":
-          {"heuristic": "learned", //"learned"
-            "max": 10, //"inf",
-            "min": -10, //"-inf"
+          "learning": true,
+          "observations" : ["generation", "load", "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"],
+          "reward_function": "net_profit", // "economic_advantage", "net_profit"
+          "use_synthetic_profile": "Building_3"
+        },
+        "load": {
+          "scale": 1
+        }, // do not change, the load will stay fixed at scale 1
+        "generation": {
+          "scale": 1
+        } // do not change, the generation will stay fixed at scale 1
+      },
+      "Building_4": { // I'd recommend keeping the name the same as the name of the synthetic profile
+        "type": "Residential",
+        "trader": {
+          "track_metrics": true,
+          "type": "gym_agent",
+          "P_max": 3000,
+          "actions": {
+            "price_ask": {"heuristic": "learned", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+            "quantity_ask": {"heuristic": "learned", "max": 10, "min": 0}, // "learned, adjust the  max accordingly? Min need to stay at 0
+
+            "price_bid": {"heuristic": "learned", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+            "quantity_bid": {"heuristic": "learned", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
+            "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
           },
-      "storage": {"heuristic": "learned",
-                  "max": 3000,
-                  "min": -3000} //"learned", "greedy"
-    },
-    "learning": true,
-    "observations" : ["generation", "load", "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"],
-    "reward_function": "net_profit", // "economic_advantage", "net_profit"
-    "use_synthetic_profile": "Building_4"
-  },
-  "load": {
-    "scale": 1
-  },
-  "generation": {
-    "scale": 1
-  }
-}
+          "learning": true,
+          "observations" : ["generation", "load", "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"],
+          "reward_function": "net_profit", // "economic_advantage", "net_profit"
+          "use_synthetic_profile": "Building_4"
+        },
+        "load": {
+          "scale": 1
+        }, // do not change, the load will stay fixed at scale 1
+        "generation": {
+          "scale": 1
+        } // do not change, the generation will stay fixed at scale 1
+      },
+      "Building_5": { // I'd recommend keeping the name the same as the name of the synthetic profile
+        "type": "Residential",
+        "trader": {
+          "track_metrics": true,
+          "type": "gym_agent",
+          "P_max": 3000,
+          "actions": {
+            "price_ask": {"heuristic": "learned", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+            "quantity_ask": {"heuristic": "learned", "max": 10, "min": 0}, // "learned, adjust the  max accordingly? Min need to stay at 0
+
+            "price_bid": {"heuristic": "learned", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+            "quantity_bid": {"heuristic": "learned", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
+            "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
+          },
+          "learning": true,
+          "observations" : ["generation", "load", "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"],
+          "reward_function": "net_profit", // "economic_advantage", "net_profit"
+          "use_synthetic_profile": "Building_5"
+        },
+        "load": {
+          "scale": 1
+        }, // do not change, the load will stay fixed at scale 1
+        "generation": {
+          "scale": 1
+        } // do not change, the generation will stay fixed at scale 1
+      }
     }
   }
   

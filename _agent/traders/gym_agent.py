@@ -434,82 +434,42 @@ class Trader:
     async def reset(self, **kwargs):
         return True
 
-    # Deprecated
-    # async def get_heuristic_actions(self, ts_act):
-    #     act_generation, act_load = await self.__participant['read_profile'](ts_act)
-    #     # print('Gym netloads ts_act', act_generation, act_load)
-    #     heuristic_info = {'load': act_load,
-    #                       'generation': act_generation
-    #                       }
-    #     for action in self.allowed_actions:
-    #         if self.allowed_actions[action]['heuristic'] !=  'learned':
-    #             if action == 'price':
-    #                 self.a_t[action] = self.price_heuristic.get_value(**heuristic_info)
-    #             elif action == 'quantity':
-    #                 self.a_t[action] = self.quantity_heuristic.get_value(**heuristic_info)
-    #             elif action == 'storage':
-    #                 raise NotImplementedError
-    #             else:
-    #                 print('did not recognize action key', action)
-    #                 raise NotImplementedError
-    #
-    #     # print('Gym self.a_t', self.a_t)
-    #     return
-
     async def decode_actions(self, ts_act):
         """
-        TODO: November 30, 2022: this method will be used to decode the actions that are received from epymarl.
-        #one price, one quantity for now
-        if quantity > 0:
-            we ask --> we only need
-            bid beomes quantiity = 0, price = 0
-        else
-            we bid
-            ask becomes quantity = 0, price = 0
+        We decode the external actions into the action dict to be fed into the market.
+        As we are expecting an external heuristic to be feeding the gym agent, we want:
+        1. A bid price and quantity
+        2. A solar ask price and quantity
+        3. A storage action
+
         """
-        a_t = self.a_t
-        if 'price' in self.a_t:
-            price = self.a_t['price']
-            price = round(price, 4) if price is not None else 0.0
-        else:
-            price = 0.0
-
-        if "quantity" in self.a_t:
-            quantity = self.a_t['quantity']
-            quantity = quantity if quantity is not None else 0
-        else:
-            quantity = 0
-
         actions = dict()
-        # print(action_indices)
-        # price = self.actions['price'][action_indices['price']]
-        # quantity = self.actions['quantity'][action_indices['quantity']]
 
-        if quantity >= 0:
-            actions['bids'] = {
-                str(ts_act): {
-                    'quantity': quantity,
-                    'price': price
-                }
-            }
-        elif quantity < 0:
-            actions['asks'] = {
-                'solar': {
-                    str(ts_act): {
-                        'quantity': -quantity,
-                        'price': price
-                    }
-                }
-            }
+        # bids
+        assert 'price_bid' in self.a_t, 'price_bid not in actions, must be a float supplied by external heuristic'
+        price_bid = self.a_t['price_bid']
+        price_bid = round(price_bid, 4)
+        assert 'quantity_bid' in self.a_t, 'quantity_bid not in actions, must be a float or int supplied by external heuristic'
+        quantity_bid = self.a_t['quantity_bid']
+        quantity_bid = round(quantity_bid, 4)
+        # print the quantity bid in case of error
+        assert quantity_bid >= 0, 'quantity_bid must be greater equal 0, quantity_bid: {}'.format(quantity_bid)
+        actions['bids'] = { str(ts_act): {'quantity': quantity_bid, 'price': price_bid }}
 
+        # asks, we will dump everything into the solar pool for now
+        assert 'price_ask' in self.a_t, 'price_ask not in actions, must be a float supplied by external heuristic'
+        price_ask = self.a_t['price_ask']
+        price_ask = round(price_ask, 4)
+        assert 'quantity_ask' in self.a_t, 'quantity_ask not in actions, must be a float or int supplied by external heuristic'
+        quantity_ask = self.a_t['quantity_ask']
+        quantity_ask = round(quantity_ask, 4)
+        assert quantity_ask >= 0, 'quantity_ask must be greater equal 0, quantity_bid: {}'.format(quantity_bid)
+        actions['asks'] = {'solar': { str(ts_act): {'quantity': quantity_ask, 'price': price_ask }}}
 
-        if "storage" in self.a_t:
-            storage = self.a_t['storage']
-            storage = int(storage) if storage != None else 0
-
-            actions['bess'] = {
-                str(ts_act): storage
-            }
+        assert 'storage' in self.a_t, 'storage not in actions, must be a float or int supplied by external heuristic'
+        storage = self.a_t['storage']
+        storage = int(storage) #ToDo: bug steven to update the battery model to accept floats
+        actions['bess'] = { str(ts_act): storage }
 
         return actions
 
