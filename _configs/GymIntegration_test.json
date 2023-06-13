@@ -15,6 +15,7 @@
   "server": {
       "host": ""
     }, // Unimportant for this one, should be taken care of by TREX-Core
+  "sim_controller": {"kill_list_name": null}, //these will be edited at startup time from the gym agent
 
   "training": {
       "curriculum": {}

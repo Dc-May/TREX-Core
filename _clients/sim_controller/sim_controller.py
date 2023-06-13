@@ -3,6 +3,8 @@ import time
 import os
 import signal
 import dataset
+from multiprocessing import shared_memory
+import multiprocessing as mp
 from TREX_Core._clients.sim_controller.training_controller import TrainingController
 from TREX_Core._utils import utils, db_utils
 import sqlalchemy_utils
@@ -26,6 +28,10 @@ class Controller:
     def __init__(self, sio_client, configs, **kwargs):
         self.__client = sio_client
         self.__config = configs
+        if 'sim_controller' in self.__config:
+            assert 'kill_list_name' != None, 'kill_list_name must be supplied in order to externally terminate the simulation'
+            self.kill_list_name = self.__config['sim_controller']['kill_list_name']
+            sml = shared_memory.ShareableList(name=self.kill_list_name)
 
         self.__learning_agents = [participant for participant in self.__config['participants'] if
                                  'learning' in self.__config['participants'][participant]['trader'] and
@@ -88,7 +94,6 @@ class Controller:
             'market_turn_end': False,
         }
         self.training_controller = TrainingController(self.__config, self.status)
-
     async def delay(self, s):
         '''This function delays the sim by s seconds using the client sleep method so as not to interrupt the thread control. 
 
@@ -465,4 +470,19 @@ class Controller:
                     await self.__client.emit('end_simulation')
                     await self.delay(1)
                     await self.__client.disconnect()
+                    os.kill(os.getpid(), signal.SIGINT)
+
+            if hasattr(self, 'kill_list_name'):
+                kill_list= shared_memory.ShareableList(name=self.kill_list_name)
+                assert kill_list[0] == 'kill', 'list initialized wrong, should be ["kill", bool_kill_command, bool_command_executed]'
+                if kill_list[1] and not kill_list[2]: #we have a kill command and it has not been executed yet
+                    self.status['sim_ended'] = True
+                    # TODO: add function to reset sim for next hyperparameter set
+                    # if self.status['sim_ended']:
+                    print('Terminating TREX-Core simulation via external killswitch')
+                    await self.__client.emit('end_simulation')
+                    await self.delay(1)
+                    await self.__client.disconnect()
+                    await self.delay(10)
+                    kill_list[2] = True #kill command has been executed
                     os.kill(os.getpid(), signal.SIGINT)
