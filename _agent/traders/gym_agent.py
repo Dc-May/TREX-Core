@@ -62,7 +62,7 @@ class Trader:
 
         # self._check_sharedmemory()
         # self.shared_list_action = shared_memory.ShareableList(name=self.action_list_name)
-        #self.shared_list_observation = shared_memory.ShareableList(name=self.observation_list_name)
+        # self.shared_list_observation = shared_memory.ShareableList(name=self.observation_list_name)
         # self.shared_list_reward = shared_memory.ShareableList(name=self.reward_list_name)
 
 
