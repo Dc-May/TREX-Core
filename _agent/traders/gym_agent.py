@@ -290,8 +290,8 @@ class Trader:
             time_cos_dayinyear=np.cos(2 * np.pi * day_in_year)
             observations_t.append(time_cos_dayinyear)
 
-        if 'soc' in self.observation_variables:
-            self.obs_order.append('soc')
+        if 'SoC' in self.observation_variables:
+            self.obs_order.append('SoC')
             storage_schedule = await self.__participant['storage']['check_schedule'](ts_obs)
             soc = storage_schedule[ts_obs]['projected_soc_end']
             observations_t.append(soc)

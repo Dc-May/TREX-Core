@@ -47,7 +47,7 @@
             "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
           },
           "learning": true,
-          "observations" : ["generation", "load", "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"],
+          "observations" : ["generation", "load", "SoC", "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"],
           "reward_function": "net_profit", // "economic_advantage", "net_profit"
           "use_synthetic_profile": "Building_1"
         },
@@ -56,7 +56,14 @@
         }, // do not change, the load will stay fixed at scale 1
         "generation": {
           "scale": 1
-        } // do not change, the generation will stay fixed at scale 1
+        }, // do not change, the generation will stay fixed at scale 1
+        "storage": {  // (optional) Defines the storage system to be attached to a participant
+          "type": "Bess", // storage type, must exist in _devices
+          "capacity": 5000,  // Usable capacity defined in Wh
+          "power": 3000, // constant charge/discharge rate defined in W
+          "efficiency": 0.95, // one way efficiency. round-trip efficiency is efficiency^2
+          "monthly_sdr": 0.05 // monthly self-discharge rate as a fraction of usable capacity
+      }
       },
       "Building_2": {
   "type": "Residential",
@@ -73,7 +80,7 @@
         "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
     },
     "learning": true,
-    "observations" : ["generation", "load", "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"],
+    "observations" : ["generation", "load", "SoC", "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"],
     "reward_function": "net_profit", // "economic_advantage", "net_profit"
     "use_synthetic_profile": "Building_2"
   },
@@ -82,7 +89,14 @@
   },
   "generation": {
     "scale": 1
-  }
+  },
+  "storage": {  // (optional) Defines the storage system to be attached to a participant
+        "type": "Bess", // storage type, must exist in _devices
+        "capacity": 5000,  // Usable capacity defined in Wh
+        "power": 3000, // constant charge/discharge rate defined in W
+        "efficiency": 0.95, // one way efficiency. round-trip efficiency is efficiency^2
+        "monthly_sdr": 0.05 // monthly self-discharge rate as a fraction of usable capacity
+      }
 }
     }
   }
