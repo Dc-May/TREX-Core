@@ -162,31 +162,32 @@ class Trader:
 
         if 'generation' in self.observation_variables:
             self.obs_order.append('generation')
-
-            if self.profile_stats:
-                avg_generation = self.profile_stats['avg_generation'] #FixMe: (Daniel, Jan9th 2023) We need to add the scaling from the config here otherwise the mean will be wrong
-                generation_scale = self.__participant['profile_params']['generation_scale']
-                avg_generation = round(avg_generation*generation_scale, 4) #turn into W,
-                obs_generation = round(obs_generation, 4)
-                stddev_generation = self.profile_stats['stddev_generation']
-                z_next_generation = (obs_generation - avg_generation) / max(stddev_generation, 1e-8)
-                observations_t.append(z_next_generation)
-            else:
-                observations_t.append(obs_generation)
+            # Deprecated, since we now prefer normalization outside of TREX-Core
+            # if self.profile_stats:
+            #     avg_generation = self.profile_stats['avg_generation'] #FixMe: (Daniel, Jan9th 2023) We need to add the scaling from the config here otherwise the mean will be wrong
+            #     generation_scale = self.__participant['profile_params']['generation_scale']
+            #     avg_generation = round(avg_generation*generation_scale, 4) #turn into W,
+            #     obs_generation = round(obs_generation, 4)
+            #     stddev_generation = self.profile_stats['stddev_generation']
+            #     z_next_generation = (obs_generation - avg_generation) / max(stddev_generation, 1e-8)
+            #     observations_t.append(z_next_generation)
+            # else:
+            observations_t.append(obs_generation)
 
         if 'load' in self.observation_variables:
             self.obs_order.append('load')
 
-            if self.profile_stats:
-                avg_load = self.profile_stats['avg_consumption'] #FixMe: (Daniel, Jan9th 2023) We need to add the scaling from the config here otherwise the mean will be wrong
-                load_scale = self.__participant['profile_params']['load_scale']
-                avg_load = round(avg_load* load_scale, 4)   # turn into W
-                obs_load = round(obs_load, 4)
-                stddev_load = self.profile_stats['stddev_consumption']
-                z_next_load = (obs_load - avg_load) / max(stddev_load, 1e-8)
-                observations_t.append(z_next_load)
-            else:
-                observations_t.append(obs_load)
+            # Deprecated, since we now prefer normalization outside of TREX-Core
+            # if self.profile_stats:
+            #     avg_load = self.profile_stats['avg_consumption'] #FixMe: (Daniel, Jan9th 2023) We need to add the scaling from the config here otherwise the mean will be wrong
+            #     load_scale = self.__participant['profile_params']['load_scale']
+            #     avg_load = round(avg_load* load_scale, 4)   # turn into W
+            #     obs_load = round(obs_load, 4)
+            #     stddev_load = self.profile_stats['stddev_consumption']
+            #     z_next_load = (obs_load - avg_load) / max(stddev_load, 1e-8)
+            #     observations_t.append(z_next_load)
+            # else:
+            observations_t.append(obs_load)
 
         #ToDo - Daniel & Steven - get these from special market
         settle_stats = self.__participant['market_info']['settle_stats']
@@ -194,8 +195,6 @@ class Trader:
         #get grid prices to normalize, if necessary
         price_in_obs = ['price' in obs for obs in self.observation_variables]
         if any(price_in_obs) and len(settle_stats) > 0:
-            # FixMe: atm we do not know if it makes sense to normalize market price based on this?
-            # FixMe: this also assumes we cannot bid/ask above grid sell/buy price
             participant = self.__participant
             if 'settled_time' in settle_stats:
                 ts_settle_stats = settle_stats['settled_time']
@@ -215,8 +214,6 @@ class Trader:
                 grid_sell_price = 0.069
                 grid_buy_price = 0.1449
 
-            def normalize_price(price):
-                return (price - grid_sell_price) / (grid_buy_price - grid_sell_price)
 
 
 
@@ -232,9 +229,6 @@ class Trader:
 
             if obs not in ['generation', 'load'] and obs in self.__participant['market_info']['settle_stats']:
                 o_t = self.__participant['market_info']['settle_stats'][obs]
-                if 'price' in obs:
-                    o_t = normalize_price(o_t)
-
                 observations_t.append(o_t)
                 self.obs_order.append(obs)
 
@@ -367,7 +361,7 @@ class Trader:
 
 
         obs_t = await self.pre_process_obs(ts_obs)
-        # print('Agent Observations', obs_t)
+        # print('Agent Observations', obs_t, flush=True)
 
         #### Send rewards into reward buffer:
         reward = await self._rewards.calculate()
@@ -495,20 +489,14 @@ class Trader:
         """
         # check the action flag
         sml_actions = shared_memory.ShareableList(name=self.action_list_name)
-        flag = False
-        while not flag: #wait for the flag to be set
+        while not sml_actions[0]: #check the flag, if it indicates ready to read then read actions. We would expect the flag to be true by now
+            await asyncio.sleep(0.001)
 
-            flag = sml_actions[0]
-
-            if flag:
-                #read the buffer
-                for action in self.a_t:
-                    if action in self.allowed_actions and self.allowed_actions[action]['heuristic'] == 'learned':
-                        sml_action_index = list(self.a_t.keys()).index(action) + 1 #because we need to respect the flag!
-
-                        self.a_t[action] = sml_actions[sml_action_index]
-
-
+        #now, that sml[0] is True, we read the actions
+        for action in self.a_t:
+            if action in self.allowed_actions and self.allowed_actions[action]['heuristic'] == 'learned':
+                sml_action_index = list(self.a_t.keys()).index(action) + 1 #because we need to respect the flag!
+                self.a_t[action] = sml_actions[sml_action_index]
 
         sml_actions[0] = False #set flag to false
 
@@ -522,10 +510,14 @@ class Trader:
         # pack the values of the obs array into the shares list
         # FixMe: this could be brittle if execution speed becomes too fast!
         sml_obs = shared_memory.ShareableList(name=self.observation_list_name)
+
+        while sml_obs[0]: #the flag should be false, indicating a ready to be written. If thats not the case we wait
+            await asyncio.sleep(0.001) #wait for 1ms and then check again
+
         for e, item in enumerate(obs):
             # print(e, item)
             sml_obs[e+1] = item #so we respect the flag
-        sml_obs[0] = True #setting flag to true
+        sml_obs[0] = True #setting flag to True, indicating ready to be read
 
     async def write_r_to_sml(self, reward):
         """
@@ -535,8 +527,11 @@ class Trader:
 
         # FixMe: this could be brittle if execution speed becomes too fast!
         sml_reward = shared_memory.ShareableList(name=self.reward_list_name)
+        while sml_reward[0]: #the flag should be false, indicating a ready to be written. If thats not the case we wait
+            await asyncio.sleep(0.001) #wait for 1ms and then check again
+
         sml_reward[1] = reward
-        sml_reward[0] = True #setting flag to
+        sml_reward[0] = True #setting flag to True, indicating ready to be read
 
 
 
