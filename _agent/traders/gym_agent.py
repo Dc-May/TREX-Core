@@ -143,82 +143,50 @@ class Trader:
     # Core Functions, learn and act, called from outside
     async def pre_process_obs(self, ts_obs):
         # print('entered preprocessing')
-        # ToDo: add histograms for observations
-        self.obs_order = []
-        data_for_tb = []
+
+        # we need to make sure that the observation get put into the right order
+        obs_t_dict = {key: None for key in self.observation_variables}
 
         obs_generation, obs_load = await self.__participant['read_profile'](ts_obs)
-
-        observations_t = []
-        if not hasattr(self, 'profile_stats'):
-            # self.profile_stats = await self.__participant['get_profile_stats']()
-            #ToDo: at some point reintroduce normalization here
-            self.profile_stats = {}
-            self.profile_stats['avg_generation'] = 0
-            self.profile_stats['stddev_generation'] = 1
-
-            self.profile_stats['avg_consumption'] = 0
-            self.profile_stats['stddev_consumption'] = 1
+        # print('obs_generation:', obs_generation, '// obs_load:', obs_load,  '// ts_obs:', ts_obs, flush=True)
 
         if 'generation' in self.observation_variables:
-            self.obs_order.append('generation')
-            # Deprecated, since we now prefer normalization outside of TREX-Core
-            # if self.profile_stats:
-            #     avg_generation = self.profile_stats['avg_generation'] #FixMe: (Daniel, Jan9th 2023) We need to add the scaling from the config here otherwise the mean will be wrong
-            #     generation_scale = self.__participant['profile_params']['generation_scale']
-            #     avg_generation = round(avg_generation*generation_scale, 4) #turn into W,
-            #     obs_generation = round(obs_generation, 4)
-            #     stddev_generation = self.profile_stats['stddev_generation']
-            #     z_next_generation = (obs_generation - avg_generation) / max(stddev_generation, 1e-8)
-            #     observations_t.append(z_next_generation)
-            # else:
-            observations_t.append(obs_generation)
+            obs_t_dict['generation'] = obs_generation
 
         if 'load' in self.observation_variables:
-            self.obs_order.append('load')
+            obs_t_dict['load'] = obs_load
 
-            # Deprecated, since we now prefer normalization outside of TREX-Core
-            # if self.profile_stats:
-            #     avg_load = self.profile_stats['avg_consumption'] #FixMe: (Daniel, Jan9th 2023) We need to add the scaling from the config here otherwise the mean will be wrong
-            #     load_scale = self.__participant['profile_params']['load_scale']
-            #     avg_load = round(avg_load* load_scale, 4)   # turn into W
-            #     obs_load = round(obs_load, 4)
-            #     stddev_load = self.profile_stats['stddev_consumption']
-            #     z_next_load = (obs_load - avg_load) / max(stddev_load, 1e-8)
-            #     observations_t.append(z_next_load)
-            # else:
-            observations_t.append(obs_load)
+        if 'time' in self.observation_variables:
+            obs_t_dict['time'] = ts_obs[0] # we return the timestamp, can be converted using datetime.datetime.fromtimestamp(ts_obs[0])
 
-        #ToDo - Daniel & Steven - get these from special market
+        if 'SoC' in self.observation_variables:
+            storage_schedule = await self.__participant['storage']['check_schedule'](ts_obs)
+            soc = storage_schedule[ts_obs]['projected_soc_end']
+            obs_t_dict['SoC'] = soc
+
+        # collect the settle stats if necessary
         settle_stats = self.__participant['market_info']['settle_stats']
+        participant = self.__participant
+        if 'settled_time' in settle_stats:
+            ts_settle_stats = settle_stats['settled_time']
+            ts_settle_stats = str(tuple(ts_settle_stats))
 
-        #get grid prices to normalize, if necessary
-        price_in_obs = ['price' in obs for obs in self.observation_variables]
-        if any(price_in_obs) and len(settle_stats) > 0:
-            participant = self.__participant
-            if 'settled_time' in settle_stats:
-                ts_settle_stats = settle_stats['settled_time']
-                ts_settle_stats = str(tuple(ts_settle_stats))
-            else:
-                ts_settle_stats = None
-                raise NotImplementedError('Settle stats not available')
-
-            #FixMe: why cant we just do this?
-            # assert ts_settle_stats in participant['market_info']
             if ts_settle_stats in participant['market_info']:
                 grid_stats = participant['market_info'][ts_settle_stats]
                 grid_sell_price = grid_stats['grid']['sell_price']
                 grid_buy_price = grid_stats['grid']['buy_price']
                 assert grid_buy_price >= grid_sell_price, 'grid buy price should be higher than grid sell price'
             else:
-                grid_sell_price = 0.069
-                grid_buy_price = 0.1449
-
-
-
+                print('grid stats not available for participant', participant['id'], 'at timestep', ts_obs,
+                      flush=True)
+                # raise ValueError('Grid stats not available')
+        else:
+            print('settle stats not available for participant', participant['id'], 'at timestep', ts_obs, flush=True)
+            # raise ValueError('Settle stats not available')
 
         for obs in self.observation_variables:
-            #settle stats keys:
+            if obs not in ['generation', 'load', 'time', 'SoC']:
+            # settle stats keys:
             # {'settled_time': [1433145600, 1433149200],
             # 'total_settled_quantity': 0, 'avg_settlement_quantity_sell': 0, 'avg_settlement_quantity_buy': 0,
             #  'avg_settlement_sell_price_kWh': 0.1449, 'avg_settlement_buy_price_kWh': 0.069,
@@ -226,70 +194,15 @@ class Trader:
             #  'total_ask_quantity': 0, 'avg_ask_quantity': 0,
             #  'min_bid_price': 0.069, 'max_bid_price': 0.069, 'avg_bid_price_kWh': 0.069,
             #  'total_bid_quantity': 0, 'avg_bid_quantity': 0}
+                if obs in settle_stats:
+                    o_t = self.__participant['market_info']['settle_stats'][obs]
+                    obs_t_dict[obs] = o_t
+                else:
+                    obs_t_dict[obs] = None
+                    #raise ValueError('Observation variable not available')
 
-            if obs not in ['generation', 'load'] and obs in self.__participant['market_info']['settle_stats']:
-                o_t = self.__participant['market_info']['settle_stats'][obs]
-                observations_t.append(o_t)
-                self.obs_order.append(obs)
-
-        # if total_quantity_ls > 0:
-        #    print(total_quantity_ls, 'Wh settled, at price of', settle_stats['weighted_avg_settlement_buy_price'], 'for buy and', settle_stats['weighted_avg_settlement_sell_price'], 'for sell')
-        # ToDo - Daniel - there should be an inbuilt conversion for these formats
-
-        timestamp = ts_obs[0]
-        # dt = datetime.fromtimestamp(ts_obs[0])
-        # dt_asdelta = dt - datetime.min
-        # dt_seconds = dt_asdelta.total_seconds()
-
-        ts_to_minutes = 1/60
-        ts_to_hour = ts_to_minutes*(1/60)
-        ts_to_day = ts_to_hour*(1/24)
-        ts_to_week = ts_to_day * (1 / 7)
-        ts_to_year = ts_to_day * (1 / 365)
-
-        # ToDo - Daniel - get rid of ugly if loop
-        if 'time_sin_hour' in self.observation_variables:
-            self.obs_order.append('time_sin_hour')
-            hour_in_day = timestamp *ts_to_hour
-            time_sin_hour=np.sin(2 * np.pi *hour_in_day )
-            observations_t.append(time_sin_hour)
-
-        if 'time_cos_hour' in self.observation_variables:
-            self.obs_order.append('time_cos_hour')
-            hour_in_day = timestamp * ts_to_hour
-            time_cos_hour =np.cos(2 * np.pi * hour_in_day)
-            observations_t.append(time_cos_hour)
-
-        if 'time_sin_day' in self.observation_variables:
-            self.obs_order.append('time_sin_day')
-            daytype = timestamp *ts_to_day
-            time_sin_day=np.sin(2 * np.pi * daytype)
-            observations_t.append(time_sin_day)
-
-        if 'time_cos_day' in self.observation_variables:
-            self.obs_order.append('time_cos_day')
-            daytype = timestamp * ts_to_day
-            time_cos_day=np.cos(2 * np.pi * daytype)
-            observations_t.append(time_cos_day)
-
-        if 'time_sin_dayinyear' in self.observation_variables:
-            self.obs_order.append('time_sin_year')
-            day_in_year = timestamp *ts_to_year
-            time_sin_dayinyear = np.sin(2 * np.pi * day_in_year)
-            observations_t.append(time_sin_dayinyear)
-
-        if 'time_cos_dayinyear' in self.observation_variables:
-            self.obs_order.append('time_cos_year')
-            day_in_year = timestamp * ts_to_year
-            time_cos_dayinyear=np.cos(2 * np.pi * day_in_year)
-            observations_t.append(time_cos_dayinyear)
-
-        if 'SoC' in self.observation_variables:
-            self.obs_order.append('SoC')
-            storage_schedule = await self.__participant['storage']['check_schedule'](ts_obs)
-            soc = storage_schedule[ts_obs]['projected_soc_end']
-            observations_t.append(soc)
-
+        # now we convert the dict into a list, so we maintain the order of the original observation_variables list
+        observations_t = [obs_t_dict[obs] for obs in self.observation_variables]
         return observations_t
 
     async def act(self, **kwargs):
