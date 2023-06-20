@@ -47,7 +47,12 @@
             "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
           },
           "learning": true,
-          "observations" : ["generation", "load", "SoC"], // "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"
+        "observations" : ["generation", "load", "SoC",
+                          "avg_ask_price", "max_ask_price" ,"min_ask_price",
+                          "avg_ask_quantity", "max_ask_quantity", "min_ask_quantity","total_ask_quantity",
+                          "avg_bid_price", "max_bid_price", "min_bid_price",
+                          "avg_bid_quantity", "max_bid_quantity", "min_bid_quantity", "total_bid_quantity"
+                          ], //
           "reward_function": "net_profit", // "economic_advantage", "net_profit"
           "use_synthetic_profile": "Building_1"
         },
@@ -80,7 +85,12 @@
         "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
     },
     "learning": true,
-    "observations" : ["generation", "load", "SoC"], // "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"
+    "observations" : ["generation", "load", "SoC",
+                      "avg_ask_price", "max_ask_price" ,"min_ask_price",
+                      "avg_ask_quantity", "max_ask_quantity", "min_ask_quantity","total_ask_quantity",
+                      "avg_bid_price", "max_bid_price", "min_bid_price",
+                      "avg_bid_quantity", "max_bid_quantity", "min_bid_quantity", "total_bid_quantity"
+                      ], //
     "reward_function": "net_profit", // "economic_advantage", "net_profit"
     "use_synthetic_profile": "Building_2"
   },
