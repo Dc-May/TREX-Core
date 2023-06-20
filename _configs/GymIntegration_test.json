@@ -3,7 +3,7 @@
   "study": {
     "name": "BasicGymTest",
       "description": "",
-      "start_datetime": "2015-06-01 0:0:0", // do not change,
+      "start_datetime": "2016-08-01 0:0:0", // do not change,
       "start_datetime_sequence": "sequential", // do not change,
       "timezone": "America/Vancouver", // do not change,
       "days": 4, //Change if we want more days, goes up to 365
@@ -47,7 +47,7 @@
             "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
           },
           "learning": true,
-          "observations" : ["generation", "load", "SoC", "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"],
+          "observations" : ["generation", "load", "SoC"], // "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"
           "reward_function": "net_profit", // "economic_advantage", "net_profit"
           "use_synthetic_profile": "Building_1"
         },
@@ -80,7 +80,7 @@
         "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
     },
     "learning": true,
-    "observations" : ["generation", "load", "SoC", "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"],
+    "observations" : ["generation", "load", "SoC"], // "avg_ask_price_kWh", "max_ask_price" ,"min_ask_price" ,"avg_bid_price_kWh", "max_bid_price", "min_bid_price"
     "reward_function": "net_profit", // "economic_advantage", "net_profit"
     "use_synthetic_profile": "Building_2"
   },
