@@ -380,17 +380,17 @@ class Controller:
         if hasattr(self, 'kill_list_name'):
             kill_list= shared_memory.ShareableList(name=self.kill_list_name)
 
-            assert kill_list[0] == 'kill', 'list initialized wrong, should be ["kill", bool_kill_command, bool_command_executed, ...]'
             if kill_list[1]: #we have a kill command and it has not been executed yet
+                assert kill_list[0] == 'kill', 'list initialized wrong, should be ["kill", bool_kill_command, bool_command_executed, ...]'
                 if self.__generation == self.__generations+1:
-                    print('External killswitch triggered simultaneously with natural termination', flush=True)
+                    print('TREX-Core killswitch triggered simultaneously with natural termination', flush=True)
                 else:
-                    print('External killswitch triggered', flush=True)
+                    print('TREX-Core killswitch triggered', flush=True)
                     await self.__shutdown_sim()
                 kill_list[1] = True #kill command has been executed
 
-            assert kill_list[2] == 'reset', 'list initialized wrong, should be [..., "reset", bool_reset_command]'
             if kill_list[3]: #we have a reset command
+                assert kill_list[2] == 'reset', 'list initialized wrong, should be [..., "reset", bool_reset_command]'
                 # print('reset command received', flush=True)
                 if self.__current_step == 0:
                     print('Generation transition triggered simultaneously with natural transition', flush=True)
@@ -489,13 +489,12 @@ class Controller:
 
                 else:
                     await self.__shutdown_sim()
-
-    async def __shutdown_sim(self):
+    async def __shutdown_sim(self): #shuts down the simulation cleanly (hopefully)
         self.status['sim_ended'] = True
         # if self.status['sim_ended']:
-        print('end_simulation', self.__generation - 1, self.__generations)
+        print('Terminating simulation at generation ', self.__generation - 1, 'out of ', self.__generations)
         await self.__client.emit('end_simulation')
-        await self.delay(1)
+        await self.delay(2)
         await self.__client.disconnect()
         os.kill(os.getpid(), signal.SIGINT)
 
