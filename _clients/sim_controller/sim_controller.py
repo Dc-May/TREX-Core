@@ -492,7 +492,7 @@ class Controller:
     async def __shutdown_sim(self): #shuts down the simulation cleanly (hopefully)
         self.status['sim_ended'] = True
         # if self.status['sim_ended']:
-        print('Terminating simulation at generation ', self.__generation - 1, 'out of ', self.__generations)
+        print('Terminating simulation at generation ', self.__generation, 'out of ', self.__generations)
         await self.__client.emit('end_simulation')
         await self.delay(2)
         await self.__client.disconnect()
