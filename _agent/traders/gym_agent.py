@@ -177,8 +177,7 @@ class Trader:
                 grid_buy_price = grid_stats['grid']['buy_price']
                 assert grid_buy_price >= grid_sell_price, 'grid buy price should be higher than grid sell price'
             else:
-                print('grid stats not available for participant', participant['id'], 'at timestep', ts_obs,
-                      flush=True)
+                print('grid stats not available for participant', participant['id'], 'at timestep', ts_obs, flush=True)
                 # raise ValueError('Grid stats not available')
         else:
             print('settle stats not available for participant', participant['id'], 'at timestep', ts_obs, flush=True)
@@ -385,19 +384,6 @@ class Trader:
         This method checks the action buffer flag and if the read flag is set, it reads the value in the buffer and stores
         them in a_t
 
-        # TODO: write conversion into dictionary
-
-        Bid related asks
-        bid_price = self.shared_list_action[0]
-        bid_quantity = self.shared_list_action[1]
-
-        Solar related asks
-        solar_ask_price = self.shared_list_action[2]
-        solar_ask_quantity = self.shared_list_action[3]
-
-        Bess related asks
-        bess_ask_price = self.shared_list_action[4]
-        bees_ask_quantity = self.shared_list_action[5]
 
         """
         # check the action flag

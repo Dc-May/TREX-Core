@@ -31,6 +31,7 @@ class Controller:
         if 'sim_controller' in self.__config:
             assert 'kill_list_name' != None, 'kill_list_name must be supplied in order to externally terminate the simulation'
             self.kill_list_name = self.__config['sim_controller']['kill_list_name']
+
             sml = shared_memory.ShareableList(name=self.kill_list_name)
 
         self.__learning_agents = [participant for participant in self.__config['participants'] if
@@ -374,11 +375,31 @@ class Controller:
 
     async def step(self):
         self.status['last_step_clock'] = time.time()
-        # if self.status['sim_ended']:
-        #     print('end_simulation', self.__generation, self.__generations)
-        #     await self.__client.emit('end_simulation', namespace='/simulation')
-        #     await self.delay(1)
-        #     raise SystemExit
+
+        #acess points for remote controller through sml
+        if hasattr(self, 'kill_list_name'):
+            kill_list= shared_memory.ShareableList(name=self.kill_list_name)
+
+            assert kill_list[0] == 'kill', 'list initialized wrong, should be ["kill", bool_kill_command, bool_command_executed, ...]'
+            if kill_list[1]: #we have a kill command and it has not been executed yet
+                if self.__generation == self.__generations+1:
+                    print('External killswitch triggered simultaneously with natural termination', flush=True)
+                else:
+                    print('External killswitch triggered', flush=True)
+                    await self.__shutdown_sim()
+                kill_list[1] = True #kill command has been executed
+
+            assert kill_list[2] == 'reset', 'list initialized wrong, should be [..., "reset", bool_reset_command]'
+            if kill_list[3]: #we have a reset command
+                # print('reset command received', flush=True)
+                if self.__current_step == 0:
+                    print('Generation transition triggered simultaneously with natural transition', flush=True)
+                else:
+                    print('Generation transition triggered', flush=True)
+                    self.__current_step = self.__end_step + 1
+
+                kill_list[3] = False #reset command has been executed
+
 
         if not self.status['sim_started']:
             return
@@ -411,7 +432,9 @@ class Controller:
             # print("start simulation round")
             await self.__client.emit('start_round_simulation', message)
         # end of generation
-        elif self.__current_step == self.__end_step + 1:
+
+        elif self.__current_step == self.__end_step + 1: #ToDo: maybe allow this to be a greater than end_step
+
             self.__turn_control.update({
                 'ready': 0,
                 'weights_loaded': 0,
@@ -454,6 +477,7 @@ class Controller:
             await self.__client.emit('end_generation', message)
 
             if self.__generation > self.__generations:
+                #ToDO @Steven: check if this is still needed
                 if 'hyperparameters' in self.__config['training'] and len(self.__config['training']['hyperparameters']):
                     self.__generation = self.set_initial_generation()
                     self.__current_step = 0
@@ -462,27 +486,18 @@ class Controller:
                     self.status['sim_started'] = False
                     self.status['market_ready'] = False
                     self.status["hyperparameters_loaded"] = False
-                else:
-                    self.status['sim_ended'] = True
-                    # TODO: add function to reset sim for next hyperparameter set
-                    # if self.status['sim_ended']:
-                    print('end_simulation', self.__generation-1, self.__generations)
-                    await self.__client.emit('end_simulation')
-                    await self.delay(1)
-                    await self.__client.disconnect()
-                    os.kill(os.getpid(), signal.SIGINT)
 
-            if hasattr(self, 'kill_list_name'):
-                kill_list= shared_memory.ShareableList(name=self.kill_list_name)
-                assert kill_list[0] == 'kill', 'list initialized wrong, should be ["kill", bool_kill_command, bool_command_executed]'
-                if kill_list[1] and not kill_list[2]: #we have a kill command and it has not been executed yet
-                    self.status['sim_ended'] = True
-                    # TODO: add function to reset sim for next hyperparameter set
-                    # if self.status['sim_ended']:
-                    print('Terminating TREX-Core simulation via external killswitch')
-                    await self.__client.emit('end_simulation')
-                    await self.delay(1)
-                    await self.__client.disconnect()
-                    await self.delay(10)
-                    kill_list[2] = True #kill command has been executed
-                    os.kill(os.getpid(), signal.SIGINT)
+                else:
+                    await self.__shutdown_sim()
+
+    async def __shutdown_sim(self):
+        self.status['sim_ended'] = True
+        # if self.status['sim_ended']:
+        print('end_simulation', self.__generation - 1, self.__generations)
+        await self.__client.emit('end_simulation')
+        await self.delay(1)
+        await self.__client.disconnect()
+        os.kill(os.getpid(), signal.SIGINT)
+
+
+
