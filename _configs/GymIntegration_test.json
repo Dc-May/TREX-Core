@@ -47,12 +47,14 @@
             "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
           },
           "learning": true,
-        "observations" : ["generation", "load", "SoC",
-                          "avg_ask_price", "max_ask_price" ,"min_ask_price",
-                          "avg_ask_quantity", "max_ask_quantity", "min_ask_quantity","total_ask_quantity",
-                          "avg_bid_price", "max_bid_price", "min_bid_price",
-                          "avg_bid_quantity", "max_bid_quantity", "min_bid_quantity", "total_bid_quantity"
-                          ], //
+        "observations" : ["generation_now", "load_now", "t_now",
+                        "generation_settle", "load_settle", "t_settle",
+                        "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
+                        "avg_ask_price", "max_ask_price" ,"min_ask_price",
+                        "avg_ask_quantity", "max_ask_quantity", "min_ask_quantity","total_ask_quantity",
+                        "avg_bid_price", "max_bid_price", "min_bid_price",
+                        "avg_bid_quantity", "max_bid_quantity", "min_bid_quantity", "total_bid_quantity"
+                        ], //
           "reward_function": "net_profit", // "economic_advantage", "net_profit"
           "use_synthetic_profile": "Building_1"
         },
@@ -85,11 +87,14 @@
         "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
     },
     "learning": true,
-    "observations" : ["generation", "load", "SoC",
+    "observations" : ["generation_now", "load_now", "t_now",
+                      "generation_settle", "load_settle", "t_settle",
+                      "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
                       "avg_ask_price", "max_ask_price" ,"min_ask_price",
                       "avg_ask_quantity", "max_ask_quantity", "min_ask_quantity","total_ask_quantity",
                       "avg_bid_price", "max_bid_price", "min_bid_price",
-                      "avg_bid_quantity", "max_bid_quantity", "min_bid_quantity", "total_bid_quantity"
+                      "avg_bid_quantity", "max_bid_quantity", "min_bid_quantity", "total_bid_quantity",
+                      "reward_time_lag" //Since we're schedulign actions for t_settle > t_now, the reward we receive is delayed
                       ], //
     "reward_function": "net_profit", // "economic_advantage", "net_profit"
     "use_synthetic_profile": "Building_2"

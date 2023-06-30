@@ -141,27 +141,44 @@ class Trader:
         #     self.metrics.add('state_of_charge', sqlalchemy.Float)
 
     # Core Functions, learn and act, called from outside
-    async def pre_process_obs(self, ts_obs):
+    async def pre_process_obs(self):
         # print('entered preprocessing')
 
         # we need to make sure that the observation get put into the right order
         obs_t_dict = {key: None for key in self.observation_variables}
 
-        obs_generation, obs_load = await self.__participant['read_profile'](ts_obs)
-        # print('obs_generation:', obs_generation, '// obs_load:', obs_load,  '// ts_obs:', ts_obs, flush=True)
+        if 'reward_time_lag' in self.observation_variables:
+            # calculations for reward time offset
+            n_rounds_act_to_r = (self.next_settle[0] - self.last_settle[0]) / self.round_duration
+            n_rounds_obs_to_act = (self.next_settle[0] - self.next_settle[0]) / self.round_duration # this is a remainder from earlier timing considerations, kept in for future flexibility
+            n_rounds_obs_to_r = n_rounds_obs_to_act + n_rounds_act_to_r
+            n_rounds_current_to_r = (self.next_settle[0] - self.current_round[0]) / self.round_duration + n_rounds_obs_to_r
+            obs_t_dict['reward_time_lag'] = n_rounds_current_to_r
 
-        if 'generation' in self.observation_variables:
-            obs_t_dict['generation'] = obs_generation
 
-        if 'load' in self.observation_variables:
-            obs_t_dict['load'] = obs_load
+        if "t_settle" in self.observation_variables:
+            obs_t_dict['t_settle'] = self.next_settle[0]
+        if "t_now" in self.observation_variables:
+            obs_t_dict['t_now'] = self.current_round[0]
 
-        if 'time' in self.observation_variables:
-            obs_t_dict['time'] = ts_obs[0] # we return the timestamp, can be converted using datetime.datetime.fromtimestamp(ts_obs[0])
+
+        if 'generation_now' or 'load_now' in self.observation_variables:
+            gen_now, load_now = await self.__participant['read_profile'](self.current_round)
+            if 'generation_now' in self.observation_variables:
+                obs_t_dict['generation_now'] = gen_now
+            if 'load_now' in self.observation_variables:
+                obs_t_dict['load_now'] = load_now
+
+        if 'generation_settle' or 'load_settle' in self.observation_variables:
+            gen_settle, load_settle = await self.__participant['read_profile'](self.next_settle)
+            if 'generation_settle' in self.observation_variables:
+                obs_t_dict['generation_settle'] = gen_settle
+            if 'load_settle' in self.observation_variables:
+                obs_t_dict['load_settle'] = load_settle
 
         if 'SoC' in self.observation_variables:
-            storage_schedule = await self.__participant['storage']['check_schedule'](ts_obs)
-            soc = storage_schedule[ts_obs]['projected_soc_end']
+            storage_schedule = await self.__participant['storage']['check_schedule'](self.next_settle)
+            soc = storage_schedule[self.next_settle]['projected_soc_end']
             obs_t_dict['SoC'] = soc
 
         # collect the settle stats if necessary
@@ -177,32 +194,21 @@ class Trader:
                 grid_buy_price = grid_stats['grid']['buy_price']
                 assert grid_buy_price >= grid_sell_price, 'grid buy price should be higher than grid sell price'
             else:
-                print('grid stats not available for participant', participant['id'], 'at timestep', ts_obs, flush=True)
+                print('grid stats not available for participant', participant['id'], 'at timestep', self.next_settle, flush=True)
                 # raise ValueError('Grid stats not available')
         else:
-            print('settle stats not available for participant', participant['id'], 'at timestep', ts_obs, flush=True)
+            print('settle stats not available for participant', participant['id'], 'at timestep', self.next_settle, flush=True)
             # raise ValueError('Settle stats not available')
 
         for obs in self.observation_variables:
-            if obs not in ['generation', 'load', 'time', 'SoC']:
-            # settle stats keys:
-            # {'settled_time': [1433145600, 1433149200],
-            # 'total_settled_quantity': 0, 'avg_settlement_quantity_sell': 0, 'avg_settlement_quantity_buy': 0,
-            #  'avg_settlement_sell_price_kWh': 0.1449, 'avg_settlement_buy_price_kWh': 0.069,
-            #  'min_ask_price': 0.1449, 'max_ask_price': 0.1449, 'avg_ask_price_kWh': 0.1449,
-            #  'total_ask_quantity': 0, 'avg_ask_quantity': 0,
-            #  'min_bid_price': 0.069, 'max_bid_price': 0.069, 'avg_bid_price_kWh': 0.069,
-            #  'total_bid_quantity': 0, 'avg_bid_quantity': 0}
-                if obs in settle_stats:
-                    o_t = self.__participant['market_info']['settle_stats'][obs]
-                    obs_t_dict[obs] = o_t
-                else:
-                    obs_t_dict[obs] = None
-                    #raise ValueError('Observation variable not available')
+            if obs in settle_stats:
+                o_t = self.__participant['market_info']['settle_stats'][obs]
+                obs_t_dict[obs] = o_t
+                #raise ValueError('Observation variable not available')
 
         # now we convert the dict into a list, so we maintain the order of the original observation_variables list
-        observations_t = [obs_t_dict[obs] for obs in self.observation_variables]
-        return observations_t
+        obs_list = [obs_t_dict[obs] for obs in self.observation_variables]
+        return obs_list
 
     async def act(self, **kwargs):
         """
@@ -261,18 +267,7 @@ class Trader:
         self.next_settle = self.__participant['timing']['next_settle']
         self.last_round = timing['last_round']
 
-        #the timestep we observe vs the timestep we act on
-        ts_obs = self.next_settle
-        ts_act = self.next_settle #ToDo: All - discuss iff shifting battery to last settle makes sense
-
-        #calculations for reward time offset
-        n_rounds_act_to_r = (ts_act[0] - self.last_settle[0])/self.round_duration
-        n_rounds_obs_to_act = (ts_obs[0] - ts_act[0])/self.round_duration
-        n_rounds_obs_to_r = n_rounds_obs_to_act + n_rounds_act_to_r
-        n_rounds_current_to_r = (ts_obs[0] - self.current_round[0])/self.round_duration + n_rounds_obs_to_r
-
-
-        obs_t = await self.pre_process_obs(ts_obs)
+        obs_t = await self.pre_process_obs()
         # print('Agent Observations', obs_t, flush=True)
 
         #### Send rewards into reward buffer:
@@ -299,7 +294,7 @@ class Trader:
 
         # actions come in with a set order, they will need to be split up
 
-        action_dict_t = await self.decode_actions(ts_act)
+        action_dict_t = await self.decode_actions(self.next_settle)
         #     }
         if self.track_metrics:
             await asyncio.gather(
