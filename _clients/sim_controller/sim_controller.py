@@ -379,17 +379,18 @@ class Controller:
         #acess points for remote controller through sml
         if hasattr(self, 'kill_list_name'):
             kill_list= shared_memory.ShareableList(name=self.kill_list_name)
-
-            if kill_list[1]: #we have a kill command and it has not been executed yet
+            kill_command = kill_list[1]
+            reset_command = kill_list[3]
+            if kill_command: #we have a kill command and it has not been executed yet
                 assert kill_list[0] == 'kill', 'list initialized wrong, should be ["kill", bool_kill_command, bool_command_executed, ...]'
                 if self.__generation == self.__generations+1:
                     print('TREX-Core killswitch triggered simultaneously with natural termination', flush=True)
                 else:
                     print('TREX-Core killswitch triggered', flush=True)
                     await self.__shutdown_sim()
-                kill_list[1] = True #kill command has been executed
+                 #kill command has been executed
 
-            if kill_list[3]: #we have a reset command
+            if reset_command: #we have a reset command
                 assert kill_list[2] == 'reset', 'list initialized wrong, should be [..., "reset", bool_reset_command]'
                 # print('reset command received', flush=True)
                 if self.__current_step == 0:
@@ -494,8 +495,11 @@ class Controller:
         # if self.status['sim_ended']:
         print('Terminating simulation at generation ', self.__generation, 'out of ', self.__generations)
         await self.__client.emit('end_simulation')
-        await self.delay(2)
+        await self.delay(10)
         await self.__client.disconnect()
+        if hasattr(self, 'kill_list_name'):
+            kill_list= shared_memory.ShareableList(name=self.kill_list_name)
+            kill_list[1] = False #kill command executed
         os.kill(os.getpid(), signal.SIGINT)
 
 
