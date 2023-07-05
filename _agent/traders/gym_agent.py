@@ -155,13 +155,8 @@ class Trader:
             n_rounds_current_to_r = (self.next_settle[0] - self.current_round[0]) / self.round_duration + n_rounds_obs_to_r
             obs_t_dict['reward_time_lag'] = n_rounds_current_to_r
 
-
-        if "t_settle" in self.observation_variables:
-            obs_t_dict['t_settle'] = self.next_settle[0]
         if "t_now" in self.observation_variables:
             obs_t_dict['t_now'] = self.current_round[0]
-
-
         if 'generation_now' or 'load_now' in self.observation_variables:
             gen_now, load_now = await self.__participant['read_profile'](self.current_round)
             if 'generation_now' in self.observation_variables:
@@ -169,12 +164,25 @@ class Trader:
             if 'load_now' in self.observation_variables:
                 obs_t_dict['load_now'] = load_now
 
+        if "t_settle" in self.observation_variables:
+            obs_t_dict['t_settle'] = self.next_settle[0]
         if 'generation_settle' or 'load_settle' in self.observation_variables:
             gen_settle, load_settle = await self.__participant['read_profile'](self.next_settle)
             if 'generation_settle' in self.observation_variables:
                 obs_t_dict['generation_settle'] = gen_settle
             if 'load_settle' in self.observation_variables:
                 obs_t_dict['load_settle'] = load_settle
+
+
+
+        if "t_deliver" in self.observation_variables:
+            obs_t_dict['t_deliver'] = self.next_settle[0] + self.round_duration
+        if 'generation_deliver' or 'load_deliver' in self.observation_variables:
+            gen_deliver, load_deliver = await self.__participant['read_profile'](self.next_settle + self.round_duration)
+            if 'generation_deliver' in self.observation_variables:
+                obs_t_dict['generation_deliver'] = gen_deliver
+            if 'load_deliver' in self.observation_variables:
+                obs_t_dict['load_deliver'] = load_deliver
 
         if 'SoC' in self.observation_variables:
             storage_schedule = await self.__participant['storage']['check_schedule'](self.next_settle)
@@ -294,7 +302,7 @@ class Trader:
 
         # actions come in with a set order, they will need to be split up
 
-        action_dict_t = await self.decode_actions(self.next_settle)
+        action_dict_t = await self.decode_actions()
         #     }
         if self.track_metrics:
             await asyncio.gather(
@@ -335,7 +343,7 @@ class Trader:
     async def reset(self, **kwargs):
         return True
 
-    async def decode_actions(self, ts_act):
+    async def decode_actions(self):
         """
         We decode the external actions into the action dict to be fed into the market.
         As we are expecting an external heuristic to be feeding the gym agent, we want:
@@ -349,28 +357,30 @@ class Trader:
         # bids
         assert 'price_bid' in self.a_t, 'price_bid not in actions, must be a float supplied by external heuristic'
         price_bid = self.a_t['price_bid']
-        price_bid = round(price_bid, 4)
+        # price_bid = round(price_bid, 4)
         assert 'quantity_bid' in self.a_t, 'quantity_bid not in actions, must be a float or int supplied by external heuristic'
         quantity_bid = self.a_t['quantity_bid']
-        quantity_bid = round(quantity_bid, 4)
+        # quantity_bid = round(quantity_bid, 4)
         # print the quantity bid in case of error
         assert quantity_bid >= 0, 'quantity_bid must be greater equal 0, quantity_bid: {}'.format(quantity_bid)
-        actions['bids'] = { str(ts_act): {'quantity': quantity_bid, 'price': price_bid }}
+        if quantity_bid > 0:
+            actions['bids'] = { str(self.next_settle): {'quantity': quantity_bid, 'price': price_bid }}
 
         # asks, we will dump everything into the solar pool for now
         assert 'price_ask' in self.a_t, 'price_ask not in actions, must be a float supplied by external heuristic'
         price_ask = self.a_t['price_ask']
-        price_ask = round(price_ask, 4)
+        # price_ask = round(price_ask, 4)
         assert 'quantity_ask' in self.a_t, 'quantity_ask not in actions, must be a float or int supplied by external heuristic'
         quantity_ask = self.a_t['quantity_ask']
-        quantity_ask = round(quantity_ask, 4)
         assert quantity_ask >= 0, 'quantity_ask must be greater equal 0, quantity_bid: {}'.format(quantity_bid)
-        actions['asks'] = {'solar': { str(ts_act): {'quantity': quantity_ask, 'price': price_ask }}}
+        if quantity_ask > 0:
+            # quantity_ask = round(quantity_ask, 4)
+            actions['asks'] = {'solar': { str(self.next_settle): {'quantity': quantity_ask, 'price': price_ask }}}
 
         assert 'storage' in self.a_t, 'storage not in actions, must be a float or int supplied by external heuristic'
         storage = self.a_t['storage']
         storage = int(storage) #ToDo: bug steven to update the battery model to accept floats
-        actions['bess'] = { str(ts_act): storage }
+        actions['bess'] = { str(self.next_settle): storage }
 
         return actions
 
