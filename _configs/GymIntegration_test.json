@@ -190,7 +190,7 @@
   "storage": {  // (optional) Defines the storage system to be attached to a participant
     "type": "Bess", // storage type, must exist in _devices
     "capacity": 5000,  // Usable capacity defined in Wh
-    "power": 3000, // constant charge/discharge rate defined in W
+    "power": 3000, // maximum charge/discharge rate defined in W
     "efficiency": 0.95, // one way efficiency. round-trip efficiency is efficiency^2
     "monthly_sdr": 0.05 // monthly self-discharge rate as a fraction of usable capacity
 }

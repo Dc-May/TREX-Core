@@ -178,7 +178,8 @@ class Trader:
         if "t_deliver" in self.observation_variables:
             obs_t_dict['t_deliver'] = self.next_settle[0] + self.round_duration
         if 'generation_deliver' or 'load_deliver' in self.observation_variables:
-            gen_deliver, load_deliver = await self.__participant['read_profile'](self.next_settle + self.round_duration)
+            next_deliver = (self.next_settle[0] + self.round_duration, self.next_settle[1] + self.round_duration)
+            gen_deliver, load_deliver = await self.__participant['read_profile'](next_deliver)
             if 'generation_deliver' in self.observation_variables:
                 obs_t_dict['generation_deliver'] = gen_deliver
             if 'load_deliver' in self.observation_variables:
