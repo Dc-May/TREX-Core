@@ -390,13 +390,14 @@ class Trader:
         This method checks the action buffer flag and if the read flag is set, it reads the value in the buffer and stores
         them in a_t
 
-
         """
         # check the action flag
-        sml_actions = shared_memory.ShareableList(name=self.action_list_name)
-        while not sml_actions[0]: #check the flag, if it indicates ready to read then read actions. We would expect the flag to be true by now
-            await asyncio.sleep(0.001)
+        # sml_actions = shared_memory.ShareableList(name=self.action_list_name)
+        # action_flag = shared_memory.ShareableList(name=self.action_list_name)[0]
+        while not shared_memory.ShareableList(name=self.action_list_name)[0]: #check the flag, if it indicates ready to read then read actions. We would expect the flag to be true by now
+            await asyncio.sleep(0.01)
 
+        sml_actions = shared_memory.ShareableList(name=self.action_list_name)
         #now, that sml[0] is True, we read the actions
         for action in self.a_t:
             if action in self.allowed_actions and self.allowed_actions[action]['heuristic'] == 'learned':
@@ -414,16 +415,39 @@ class Trader:
         # obs will be an array
         # pack the values of the obs array into the shares list
         # FixMe: this could be brittle if execution speed becomes too fast!
+        # sml_obs = shared_memory.ShareableList(name=self.observation_list_name)
+        # sml_obs_flag = shared_memory.ShareableList(name=self.observation_list_name)[0]
+        while shared_memory.ShareableList(name=self.observation_list_name)[0]: #the flag should be false, indicating a ready to be written. If thats not the case we wait
+            await asyncio.sleep(0.01) #wait for 1ms and then check again
+
         sml_obs = shared_memory.ShareableList(name=self.observation_list_name)
-
-        while sml_obs[0]: #the flag should be false, indicating a ready to be written. If thats not the case we wait
-            await asyncio.sleep(0.001) #wait for 1ms and then check again
-
         for e, item in enumerate(obs):
             # print(e, item)
             sml_obs[e+1] = item #so we respect the flag
         sml_obs[0] = True #setting flag to True, indicating ready to be read
 
+    @tenacity.retry(wait=tenacity.wait_fixed(0.01) + tenacity.wait_random(0, 0.01))
+    async def write_obs_to_sml_new(self, obs):
+        """
+        This method writes the values in the observations array to the observation buffer and then sets the flag for
+        EPYMARL to read the values.
+
+        """
+        # obs will be an array
+        # pack the values of the obs array into the shares list
+        # FixMe: this could be brittle if execution speed becomes too fast!
+        # sml_obs = shared_memory.ShareableList(name=self.observation_list_name)
+        # sml_obs_flag = shared_memory.ShareableList(name=self.observation_list_name)[0]
+        if shared_memory.ShareableList(name=self.observation_list_name)[0]: #the flag should be false, indicating a ready to be written. If thats not the case we wait
+            raise tenacity.TryAgain
+        else:
+            sml_obs = shared_memory.ShareableList(name=self.observation_list_name)
+            for e, item in enumerate(obs):
+                # print(e, item)
+                sml_obs[e + 1] = item  # so we respect the flag
+            sml_obs[0] = True
+
+            return True # So loop can be skipped
     async def write_r_to_sml(self, reward):
         """
         This method writes the reward value into the rewards array and then sets the flag for EPYMARL to read the
@@ -431,10 +455,12 @@ class Trader:
         """
 
         # FixMe: this could be brittle if execution speed becomes too fast!
-        sml_reward = shared_memory.ShareableList(name=self.reward_list_name)
-        while sml_reward[0]: #the flag should be false, indicating a ready to be written. If thats not the case we wait
-            await asyncio.sleep(0.001) #wait for 1ms and then check again
+        # sml_reward = shared_memory.ShareableList(name=self.reward_list_name)
+        # sml_reward_flag = shared_memory.ShareableList(name=self.reward_list_name)[0]
+        while shared_memory.ShareableList(name=self.reward_list_name)[0]: #the flag should be false, indicating a ready to be written. If thats not the case we wait
+            await asyncio.sleep(0.01) #wait for 1ms and then check again
 
+        sml_reward = shared_memory.ShareableList(name=self.reward_list_name)
         sml_reward[1] = reward
         sml_reward[0] = True #setting flag to True, indicating ready to be read
 

@@ -1,7 +1,7 @@
 {
   "version": "3.7.0",
   "study": {
-    "name": "BasicGymTest",
+    "name": "EpisodeTests_net_profit  Reward",
       "description": "",
       "start_datetime": "2016-08-01 0:0:0", // do not change,
       "start_datetime_sequence": "sequential", // do not change,
