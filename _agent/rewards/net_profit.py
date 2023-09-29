@@ -15,7 +15,7 @@ class Reward:
         """
         if not last_deliver:
             if 'last_deliver' not in self.__timing:
-                return None
+                return 0.0
             else:
                 last_deliver = self.__timing['last_deliver']
 

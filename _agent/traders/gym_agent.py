@@ -72,22 +72,24 @@ class Trader:
         #ToDo - Daniel - Think about a nicer way of doing this
         #decode actions, load heuristics if necessary
         self.allowed_actions = kwargs['actions']
-        self.a_t = {}
+        self.learned_actions = {}
+        self.heuristic_actions = {}
         for action in kwargs['actions']:
-            self.a_t[action] = None
+
             # Deprecated
-            if kwargs['actions'][action]['heuristic'] != 'learned':
-                raise NotImplementedError('Only learned actions are supported in the gym agent. Please reassign ', action, 'to learned', flush=True)
-            # Deprecated
-            #     heuristic = kwargs['actions'][action]['heuristic']
-            #     if 'price' == action:
-            #         self.price_heuristic = PriceHeuristics(type=heuristic)
-            #     elif 'quantity' == action:
-            #         self.quantity_heuristic = QuantityHeuristics(type=heuristic)
-            #     elif 'storage' == action:
-            #         raise NotImplementedError
-            #     else:
-            #         raise NotImplementedError
+            if kwargs['actions'][action]['heuristic'] == 'learned':
+                self.learned_actions[action] = None
+            elif kwargs['actions'][action]['heuristic'] == 'netload':
+                assert 'quantity' in action, 'Netload heuristic only works for quantity actions'
+                self.heuristic_actions[action] = None
+            elif kwargs['actions'][action]['heuristic'] == 'fixed':
+                assert 'price' in action, 'Fixed heuristic only works for price actions'
+                self.heuristic_actions[action] = None
+            else:
+                raise NotImplementedError('Only learned actions and netload quantities are supported in the gym agent. Please reassign ', action, 'to learned', flush=True)
+
+        assert 'storage' in self.learned_actions, 'storage not in learned actions, WTF?'
+
 
 
         # TODO: Find out where the action space will be defined: I suspect its not here
@@ -173,8 +175,6 @@ class Trader:
             if 'load_settle' in self.observation_variables:
                 obs_t_dict['load_settle'] = load_settle
 
-
-
         if "t_deliver" in self.observation_variables:
             obs_t_dict['t_deliver'] = self.next_settle[0] + self.round_duration
         if 'generation_deliver' or 'load_deliver' in self.observation_variables:
@@ -209,14 +209,25 @@ class Trader:
             print('settle stats not available for participant', participant['id'], 'at timestep', self.next_settle, flush=True)
             # raise ValueError('Settle stats not available')
 
+        # print('settle stats', settle_stats, flush=True)
         for obs in self.observation_variables:
             if obs in settle_stats:
-                o_t = self.__participant['market_info']['settle_stats'][obs]
-                obs_t_dict[obs] = o_t
-                #raise ValueError('Observation variable not available')
+                obs_t_dict[obs] = self.__participant['market_info']['settle_stats'][obs]
 
+        #ToDo: needs to read grid price
+        for obs in obs_t_dict:
+            if obs_t_dict[obs] is None:
+                if 'price' in obs:
+                    if 'bid' in obs:
+                        obs_t_dict[obs] = 0.1449
+                    else:
+                        obs_t_dict[obs] = 0.068
+                else:
+                    obs_t_dict[obs] = 0.0
+                #raise ValueError('Observation variable not available')
         # now we convert the dict into a list, so we maintain the order of the original observation_variables list
         obs_list = [obs_t_dict[obs] for obs in self.observation_variables]
+        # print('obs_list', obs_list, flush=True)
         return obs_list
 
     async def act(self, **kwargs):
@@ -281,7 +292,7 @@ class Trader:
 
         #### Send rewards into reward buffer:
         reward = await self._rewards.calculate()
-
+        # print('reward', reward, flush=True)
         #if we get rewards we pass obs, etc to GYM
         # this is not the optimal way of doing this but it is going to allow us to keep everything outside of gym clean
         #ToDO: all - look for better solutions
@@ -297,7 +308,6 @@ class Trader:
         await self.write_r_to_sml(reward)
     #
         await self.read_action_from_sml()
-
         # await self.get_heuristic_actions(ts_act=ts_act) #Deprecated
         # wait for the actions to come from EPYMARL
 
@@ -305,6 +315,7 @@ class Trader:
 
         action_dict_t = await self.decode_actions()
         #     }
+        # print('actions in agent', action_dict_t, flush=True)
         if self.track_metrics:
             await asyncio.gather(
                 self.metrics.track('timestamp', self.__participant['timing']['current_round'][1]),
@@ -353,38 +364,52 @@ class Trader:
         3. A storage action
 
         """
-        actions = dict()
 
-        # bids
-        assert 'price_bid' in self.a_t, 'price_bid not in actions, must be a float supplied by external heuristic'
-        price_bid = self.a_t['price_bid']
-        # price_bid = round(price_bid, 4)
-        assert 'quantity_bid' in self.a_t, 'quantity_bid not in actions, must be a float or int supplied by external heuristic'
-        quantity_bid = self.a_t['quantity_bid']
-        # quantity_bid = round(quantity_bid, 4)
-        # print the quantity bid in case of error
-        assert quantity_bid >= 0, 'quantity_bid must be greater equal 0, quantity_bid: {}'.format(quantity_bid)
-        if quantity_bid > 0:
-            actions['bids'] = { str(self.next_settle): {'quantity': quantity_bid, 'price': price_bid }}
+        assert 'storage' in self.learned_actions, 'storage neither in learned actions'
+        storage_charge = self.learned_actions['storage']
 
-        # asks, we will dump everything into the solar pool for now
-        assert 'price_ask' in self.a_t, 'price_ask not in actions, must be a float supplied by external heuristic'
-        price_ask = self.a_t['price_ask']
-        # price_ask = round(price_ask, 4)
-        assert 'quantity_ask' in self.a_t, 'quantity_ask not in actions, must be a float or int supplied by external heuristic'
-        quantity_ask = self.a_t['quantity_ask']
-        assert quantity_ask >= 0, 'quantity_ask must be greater equal 0, quantity_bid: {}'.format(quantity_bid)
-        if quantity_ask > 0:
-            # quantity_ask = round(quantity_ask, 4)
-            actions['asks'] = {'solar': { str(self.next_settle): {'quantity': quantity_ask, 'price': price_ask }}}
+        if 'price_bid' not in self.learned_actions:
+            assert 'price_bid' in self.heuristic_actions, 'price_bid neither in learned actions nor in heuristic actions'
+            self.heuristic_actions['price_bid'] = 0.11 #ToDo: check that this has no influence on the simple Market
+        else:
+            assert self.learned_actions['price_bid'] is not None
+        price_bid = self.learned_actions['price_bid'] if 'price_bid' in self.learned_actions else self.heuristic_actions['price_bid']
 
-        assert 'storage' in self.a_t, 'storage not in actions, must be a float or int supplied by external heuristic'
-        storage = self.a_t['storage']
-        storage = int(storage) #ToDo: bug steven to update the battery model to accept floats
-        actions['bess'] = { str(self.next_settle): storage }
+        if 'price_ask' not in self.learned_actions:
+            assert 'price_ask' in self.heuristic_actions, 'price_ask neither in learned actions nor in heuristic actions'
+            self.heuristic_actions['price_ask'] = 0.11
+        else:
+            assert self.learned_actions['price_ask'] is not None
+        price_ask = self.learned_actions['price_ask'] if 'price_ask' in self.learned_actions else self.heuristic_actions['price_ask']
 
-        return actions
+        # calculate the net-load for next settle
+        gen_settle, load_settle = await self.__participant['read_profile'](self.next_settle)
+        net_load = load_settle - gen_settle + storage_charge #ToDo:make sure this is the right way around!
+        if 'quantity_bid' not in self.learned_actions:
+            assert 'quantity_bid' in self.heuristic_actions, 'quantity_bid neither in learned actions nor in heuristic actions'
+            self.heuristic_actions['quantity_bid'] = max(0, net_load)
+        else:
+            assert self.learned_actions['quantity_bid'] is not None
+        quantity_bid = self.learned_actions['quantity_bid'] if 'quantity_bid' in self.learned_actions else self.heuristic_actions['quantity_bid']
 
+        if 'quantity_ask' not in self.learned_actions:
+            assert 'quantity_ask' in self.heuristic_actions, 'quantity_ask neither in learned actions nor in heuristic actions'
+            self.heuristic_actions['quantity_ask'] = max(0, -net_load)
+        else:
+            assert self.learned_actions['quantity_ask'] is not None
+        quantity_ask = self.learned_actions['quantity_ask'] if 'quantity_ask' in self.learned_actions else self.heuristic_actions['quantity_ask']
+
+
+        decoded_action = dict()
+        decoded_action['bids'] = { str(self.next_settle): {'quantity': quantity_bid, 'price': price_bid }}
+        decoded_action['asks'] = {'solar': { str(self.next_settle): {'quantity': quantity_ask, 'price': price_ask }}}
+        decoded_action['bess'] = { str(self.next_settle): int(storage_charge) }
+
+        return decoded_action
+
+    @tenacity.retry(wait=tenacity.wait_fixed(0.01)
+                          + tenacity.wait_random(0, 0.01),
+                    )
     async def read_action_from_sml(self):
         """
         This method checks the action buffer flag and if the read flag is set, it reads the value in the buffer and stores
@@ -394,19 +419,20 @@ class Trader:
         # check the action flag
         # sml_actions = shared_memory.ShareableList(name=self.action_list_name)
         # action_flag = shared_memory.ShareableList(name=self.action_list_name)[0]
-        while not shared_memory.ShareableList(name=self.action_list_name)[0]: #check the flag, if it indicates ready to read then read actions. We would expect the flag to be true by now
-            await asyncio.sleep(0.01)
+        if not shared_memory.ShareableList(name=self.action_list_name)[0]: #check the flag, if it indicates ready to read then read actions. We would expect the flag to be true by now
+            raise tenacity.TryAgain
+        else:
+            sml_actions = shared_memory.ShareableList(name=self.action_list_name)
+            #now, that sml[0] is True, we read the actions
+            for action in self.learned_actions:
+                sml_action_index = list(self.learned_actions.keys()).index(action) + 1 #because we need to respect the flag!
+                self.learned_actions[action] = sml_actions[sml_action_index]
 
-        sml_actions = shared_memory.ShareableList(name=self.action_list_name)
-        #now, that sml[0] is True, we read the actions
-        for action in self.a_t:
-            if action in self.allowed_actions and self.allowed_actions[action]['heuristic'] == 'learned':
-                sml_action_index = list(self.a_t.keys()).index(action) + 1 #because we need to respect the flag!
-                self.a_t[action] = sml_actions[sml_action_index]
+            sml_actions[0] = False #set flag to false
 
-        sml_actions[0] = False #set flag to false
+            return True
 
-    async def write_obs_to_sml(self, obs):
+    async def write_obs_to_sml_old(self, obs):
         """
         This method writes the values in the observations array to the observation buffer and then sets the flag for
         EPYMARL to read the values.
@@ -426,8 +452,10 @@ class Trader:
             sml_obs[e+1] = item #so we respect the flag
         sml_obs[0] = True #setting flag to True, indicating ready to be read
 
-    @tenacity.retry(wait=tenacity.wait_fixed(0.01) + tenacity.wait_random(0, 0.01))
-    async def write_obs_to_sml_new(self, obs):
+    @tenacity.retry(wait=tenacity.wait_fixed(0.01)
+                         + tenacity.wait_random(0, 0.01),
+                    )
+    async def write_obs_to_sml(self, obs):
         """
         This method writes the values in the observations array to the observation buffer and then sets the flag for
         EPYMARL to read the values.
@@ -435,7 +463,6 @@ class Trader:
         """
         # obs will be an array
         # pack the values of the obs array into the shares list
-        # FixMe: this could be brittle if execution speed becomes too fast!
         # sml_obs = shared_memory.ShareableList(name=self.observation_list_name)
         # sml_obs_flag = shared_memory.ShareableList(name=self.observation_list_name)[0]
         if shared_memory.ShareableList(name=self.observation_list_name)[0]: #the flag should be false, indicating a ready to be written. If thats not the case we wait
@@ -448,7 +475,7 @@ class Trader:
             sml_obs[0] = True
 
             return True # So loop can be skipped
-    async def write_r_to_sml(self, reward):
+    async def write_r_to_sml_old(self, reward):
         """
         This method writes the reward value into the rewards array and then sets the flag for EPYMARL to read the
         values.
@@ -464,6 +491,24 @@ class Trader:
         sml_reward[1] = reward
         sml_reward[0] = True #setting flag to True, indicating ready to be read
 
+    @tenacity.retry(wait=tenacity.wait_fixed(0.01)
+                          + tenacity.wait_random(0, 0.01),
+                    )
+    async def write_r_to_sml(self, reward):
+        """
+        This method writes the reward value into the rewards array and then sets the flag for EPYMARL to read the
+        values.
+        """
+        # sml_reward = shared_memory.ShareableList(name=self.reward_list_name)
+        # sml_reward_flag = shared_memory.ShareableList(name=self.reward_list_name)[0]
+        if shared_memory.ShareableList(name=self.reward_list_name)[0]: #the flag should be false, indicating a ready to be written. If thats not the case we wait
+            raise tenacity.TryAgain #wait for 1ms and then check again
+        else:
+            sml_reward = shared_memory.ShareableList(name=self.reward_list_name)
+            sml_reward[1] = reward
+            sml_reward[0] = True #setting flag to True, indicating ready to be read
+
+            return True
 
 
 

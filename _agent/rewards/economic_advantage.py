@@ -15,7 +15,7 @@ class Reward:
         """
         if not last_deliver:
             if 'last_deliver' not in self.__timing:
-                return None
+                return 0.0
             else:
                 last_deliver = self.__timing['last_deliver']
 
@@ -28,8 +28,8 @@ class Reward:
         market_profit = sum([t[1] * t[2] for t in market_transactions if t[0] == 'ask'])
         market_cost = sum([t[1] * t[2] for t in market_transactions if t[0] == 'bid'])
 
-        grid_sell_price = grid_transactions[3]
-        grid_buy_price = grid_transactions[1]
+        grid_sell_price = grid_transactions[3] if grid_transactions else 0
+        grid_buy_price = grid_transactions[1] if grid_transactions else 0
 
         nme_profit = grid_sell_price * asks_qty
         market_advantage_profit = market_profit - nme_profit
