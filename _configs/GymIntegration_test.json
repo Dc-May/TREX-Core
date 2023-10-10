@@ -6,9 +6,9 @@
       "start_datetime": "2016-08-01 0:0:0", // do not change,
       "start_datetime_sequence": "sequential", // do not change,
       "timezone": "America/Vancouver", // do not change,
-      "days": 5, //Change if we want more days, goes up to 365
+      "days": 100, //Change if we want more days, goes up to 365
       "time_step_size": 3600, // do not change, 1 hour
-      "generations": 30000 //Change if we want more generations
+      "generations": 100000 //Change if we want more generations
 //      "profiles_db_location": "taken from configs"
     },
 
@@ -23,8 +23,8 @@
 
     "market": {
       "id": "",
-      "type": "MicroTE3DCM",
-      "close_steps": 2,
+      "type": "MicroTE3DCM_simple",
+      "close_steps": 1,
       "grid": {
         "price": 0.069,
         "fee_ratio": 1.1
@@ -33,86 +33,94 @@
 
     "participants": {
       "Building_1": { // I'd recommend keeping the name the same as the name of the synthetic profile
-        "type": "Residential",
-        "trader": {
-          "track_metrics": true,
-          "type": "gym_agent",
-          "P_max": 3000,
-          "actions": {
-            "price_ask": {"heuristic": "learned", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
-            "quantity_ask": {"heuristic": "learned", "max": 10, "min": 0}, // "learned, adjust the  max accordingly? Min need to stay at 0
-
-            "price_bid": {"heuristic": "learned", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
-            "quantity_bid": {"heuristic": "learned", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
-            "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
-          },
-          "learning": true,
-        "observations" : ["generation_now", "load_now", "t_now",
-                        "generation_settle", "load_settle", "t_settle",
-                        "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-                        "avg_ask_price", "max_ask_price" ,"min_ask_price",
-                        "avg_ask_quantity", "max_ask_quantity", "min_ask_quantity","total_ask_quantity",
-                        "avg_bid_price", "max_bid_price", "min_bid_price",
-                        "avg_bid_quantity", "max_bid_quantity", "min_bid_quantity", "total_bid_quantity"
-                        ], //
-          "reward_function": "net_profit", // "economic_advantage", "net_profit"
-          "use_synthetic_profile": "Building_1"
-        },
-        "load": {
-          "scale": 1
-        }, // do not change, the load will stay fixed at scale 1
-        "generation": {
-          "scale": 1
-        }, // do not change, the generation will stay fixed at scale 1
-        "storage": {  // (optional) Defines the storage system to be attached to a participant
-          "type": "Bess", // storage type, must exist in _devices
-          "capacity": 5000,  // Usable capacity defined in Wh
-          "power": 3000, // constant charge/discharge rate defined in W
-          "efficiency": 0.95, // one way efficiency. round-trip efficiency is efficiency^2
-          "monthly_sdr": 0.05 // monthly self-discharge rate as a fraction of usable capacity
-      }
-      },
-      "Building_2": {
   "type": "Residential",
   "trader": {
     "track_metrics": true,
     "type": "gym_agent",
     "P_max": 3000,
     "actions": {
-        "price_ask": {"heuristic": "learned", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
-        "quantity_ask": {"heuristic": "learned", "max": 10, "min": 0}, // "learned, adjust the  max accordingly? Min need to stay at 0
+      "price_ask": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+      "quantity_ask": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the  max accordingly? Min need to stay at 0
 
-        "price_bid": {"heuristic": "learned", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
-        "quantity_bid": {"heuristic": "learned", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
-        "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
+      "price_bid": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+      "quantity_bid": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
+      "storage": {"heuristic": "learned", "max": 10, "min": -10} //"learned", "greedy"
     },
     "learning": true,
-    "observations" : ["generation_now", "load_now", "t_now",
-                      "generation_settle", "load_settle", "t_settle",
-                      "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-                      "avg_ask_price", "max_ask_price" ,"min_ask_price",
-                      "avg_ask_quantity", "max_ask_quantity", "min_ask_quantity","total_ask_quantity",
-                      "avg_bid_price", "max_bid_price", "min_bid_price",
-                      "avg_bid_quantity", "max_bid_quantity", "min_bid_quantity", "total_bid_quantity",
-                      "reward_time_lag" //Since we're schedulign actions for t_settle > t_now, the reward we receive is delayed
-                      ], //
-    "reward_function": "net_profit", // "economic_advantage", "net_profit"
+  "observations" : [
+                  "daytime_sin", "daytime_cos",
+                  "netload_now", "netload_settle", "netload_deliver",
+                  "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
+                  //"total_settled_quantity",
+                  //"avg_bid_price",// "max_bid_price", "min_bid_price",
+                  // "avg_bid_quantity",
+                  // "total_bid_quantity", //"std_bid_quantity",
+                   // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
+                    //"avg_ask_quantity",
+                    // "total_ask_quantity", //"std_ask_quantity",
+                  ], //
+    "reward_function": "grid_equivalent", // "economic_advantage", "net_profit"
+    "use_synthetic_profile": "Building_1"
+  },
+  "load": {
+    "scale": 1
+  }, // do not change, the load will stay fixed at scale 1
+  "generation": {
+    "scale": 1
+  }, // do not change, the generation will stay fixed at scale 1
+  "storage": {  // (optional) Defines the storage system to be attached to a participant
+    "type": "Bess", // storage type, must exist in _devices
+    "capacity": 5000,  // Usable capacity defined in Wh
+    "power": 3000, // constant charge/discharge rate defined in W
+    "efficiency": 0.95, // one way efficiency. round-trip efficiency is efficiency^2
+    "monthly_sdr": 0.05 // monthly self-discharge rate as a fraction of usable capacity
+}
+},
+      "Building_2": { // I'd recommend keeping the name the same as the name of the synthetic profile
+  "type": "Residential",
+  "trader": {
+    "track_metrics": true,
+    "type": "gym_agent",
+    "P_max": 3000,
+    "actions": {
+      "price_ask": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+      "quantity_ask": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the  max accordingly? Min need to stay at 0
+
+      "price_bid": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+      "quantity_bid": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
+      "storage": {"heuristic": "learned", "max": 10, "min": -10} //"learned", "greedy"
+    },
+    "learning": true,
+  "observations" : [
+                  "daytime_sin", "daytime_cos",
+                  "netload_now", "netload_settle", "netload_deliver",
+                  "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
+                  //"total_settled_quantity",
+                  //"avg_bid_price",// "max_bid_price", "min_bid_price",
+                  // "avg_bid_quantity",
+                  // "total_bid_quantity", //"std_bid_quantity",
+                   // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
+                    //"avg_ask_quantity",
+                    // "total_ask_quantity", //"std_ask_quantity",
+                  ], //
+    "reward_function": "grid_equivalent", // "economic_advantage", "net_profit"
     "use_synthetic_profile": "Building_2"
   },
   "load": {
     "scale": 1
-  },
+  }, // do not change, the load will stay fixed at scale 1
   "generation": {
     "scale": 1
-  },
+  }, // do not change, the generation will stay fixed at scale 1
   "storage": {  // (optional) Defines the storage system to be attached to a participant
-        "type": "Bess", // storage type, must exist in _devices
-        "capacity": 5000,  // Usable capacity defined in Wh
-        "power": 3000, // constant charge/discharge rate defined in W
-        "efficiency": 0.95, // one way efficiency. round-trip efficiency is efficiency^2
-        "monthly_sdr": 0.05 // monthly self-discharge rate as a fraction of usable capacity
-      }
+    "type": "Bess", // storage type, must exist in _devices
+    "capacity": 5000,  // Usable capacity defined in Wh
+    "power": 3000, // constant charge/discharge rate defined in W
+    "efficiency": 0.95, // one way efficiency. round-trip efficiency is efficiency^2
+    "monthly_sdr": 0.05 // monthly self-discharge rate as a fraction of usable capacity
+}
 },
+
       "Building_3": { // I'd recommend keeping the name the same as the name of the synthetic profile
   "type": "Residential",
   "trader": {
@@ -120,24 +128,27 @@
     "type": "gym_agent",
     "P_max": 3000,
     "actions": {
-      "price_ask": {"heuristic": "learned", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
-      "quantity_ask": {"heuristic": "learned", "max": 10, "min": 0}, // "learned, adjust the  max accordingly? Min need to stay at 0
+      "price_ask": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+      "quantity_ask": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the  max accordingly? Min need to stay at 0
 
-      "price_bid": {"heuristic": "learned", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
-      "quantity_bid": {"heuristic": "learned", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
-      "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
+      "price_bid": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+      "quantity_bid": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
+      "storage": {"heuristic": "learned", "max": 10, "min": -10} //"learned", "greedy"
     },
     "learning": true,
-  "observations" : ["generation_now", "load_now", "t_now",
-                  "generation_settle", "load_settle", "t_settle",
-                  "generation_deliver", "load_deliver", "t_deliver",
+  "observations" : [
+                  "daytime_sin", "daytime_cos",
+                  "netload_now", "netload_settle", "netload_deliver",
                   "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-                  "avg_ask_price", "max_ask_price" ,"min_ask_price",
-                  "avg_ask_quantity", "max_ask_quantity", "min_ask_quantity","total_ask_quantity",
-                  "avg_bid_price", "max_bid_price", "min_bid_price",
-                  "avg_bid_quantity", "max_bid_quantity", "min_bid_quantity", "total_bid_quantity"
+                  //"total_settled_quantity",
+                  //"avg_bid_price",// "max_bid_price", "min_bid_price",
+                  // "avg_bid_quantity",
+                  // "total_bid_quantity", //"std_bid_quantity",
+                   // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
+                    //"avg_ask_quantity",
+                    // "total_ask_quantity", //"std_ask_quantity",
                   ], //
-    "reward_function": "net_profit", // "economic_advantage", "net_profit"
+    "reward_function": "grid_equivalent", // "economic_advantage", "net_profit"
     "use_synthetic_profile": "Building_3"
   },
   "load": {
@@ -154,6 +165,7 @@
     "monthly_sdr": 0.05 // monthly self-discharge rate as a fraction of usable capacity
 }
 },
+
       "Building_4": { // I'd recommend keeping the name the same as the name of the synthetic profile
   "type": "Residential",
   "trader": {
@@ -161,24 +173,27 @@
     "type": "gym_agent",
     "P_max": 3000,
     "actions": {
-      "price_ask": {"heuristic": "learned", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
-      "quantity_ask": {"heuristic": "learned", "max": 10, "min": 0}, // "learned, adjust the  max accordingly? Min need to stay at 0
+      "price_ask": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+      "quantity_ask": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the  max accordingly? Min need to stay at 0
 
-      "price_bid": {"heuristic": "learned", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
-      "quantity_bid": {"heuristic": "learned", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
-      "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
+      "price_bid": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+      "quantity_bid": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
+      "storage": {"heuristic": "learned", "max": 10, "min": -10} //"learned", "greedy"
     },
     "learning": true,
-  "observations" : ["generation_now", "load_now", "t_now",
-                  "generation_settle", "load_settle", "t_settle",
-                  "generation_deliver", "load_deliver", "t_deliver",
+  "observations" : [
+                  "daytime_sin", "daytime_cos",
+                  "netload_now", "netload_settle", "netload_deliver",
                   "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-                  "avg_ask_price", "max_ask_price" ,"min_ask_price",
-                  "avg_ask_quantity", "max_ask_quantity", "min_ask_quantity","total_ask_quantity",
-                  "avg_bid_price", "max_bid_price", "min_bid_price",
-                  "avg_bid_quantity", "max_bid_quantity", "min_bid_quantity", "total_bid_quantity"
+                  //"total_settled_quantity",
+                  //"avg_bid_price",// "max_bid_price", "min_bid_price",
+                  // "avg_bid_quantity",
+                  // "total_bid_quantity", //"std_bid_quantity",
+                   // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
+                    //"avg_ask_quantity",
+                    // "total_ask_quantity", //"std_ask_quantity",
                   ], //
-    "reward_function": "net_profit", // "economic_advantage", "net_profit"
+    "reward_function": "grid_equivalent", // "economic_advantage", "net_profit"
     "use_synthetic_profile": "Building_4"
   },
   "load": {
@@ -190,7 +205,97 @@
   "storage": {  // (optional) Defines the storage system to be attached to a participant
     "type": "Bess", // storage type, must exist in _devices
     "capacity": 5000,  // Usable capacity defined in Wh
-    "power": 3000, // maximum charge/discharge rate defined in W
+    "power": 3000, // constant charge/discharge rate defined in W
+    "efficiency": 0.95, // one way efficiency. round-trip efficiency is efficiency^2
+    "monthly_sdr": 0.05 // monthly self-discharge rate as a fraction of usable capacity
+}
+},
+
+      "Building_5": { // I'd recommend keeping the name the same as the name of the synthetic profile
+  "type": "Residential",
+  "trader": {
+    "track_metrics": true,
+    "type": "gym_agent",
+    "P_max": 3000,
+    "actions": {
+      "price_ask": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+      "quantity_ask": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the  max accordingly? Min need to stay at 0
+
+      "price_bid": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+      "quantity_bid": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
+      "storage": {"heuristic": "learned", "max": 10, "min": -10} //"learned", "greedy"
+    },
+    "learning": true,
+  "observations" : [
+                  "daytime_sin", "daytime_cos",
+                  "netload_now", "netload_settle", "netload_deliver",
+                  "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
+                  //"total_settled_quantity",
+                  //"avg_bid_price",// "max_bid_price", "min_bid_price",
+                  // "avg_bid_quantity",
+                  // "total_bid_quantity", //"std_bid_quantity",
+                   // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
+                    //"avg_ask_quantity",
+                    // "total_ask_quantity", //"std_ask_quantity",
+                  ], //
+    "reward_function": "grid_equivalent", // "economic_advantage", "net_profit"
+    "use_synthetic_profile": "Building_5"
+  },
+  "load": {
+    "scale": 1
+  }, // do not change, the load will stay fixed at scale 1
+  "generation": {
+    "scale": 1
+  }, // do not change, the generation will stay fixed at scale 1
+  "storage": {  // (optional) Defines the storage system to be attached to a participant
+    "type": "Bess", // storage type, must exist in _devices
+    "capacity": 5000,  // Usable capacity defined in Wh
+    "power": 3000, // constant charge/discharge rate defined in W
+    "efficiency": 0.95, // one way efficiency. round-trip efficiency is efficiency^2
+    "monthly_sdr": 0.05 // monthly self-discharge rate as a fraction of usable capacity
+}
+},
+
+      "Building_6": { // I'd recommend keeping the name the same as the name of the synthetic profile
+  "type": "Residential",
+  "trader": {
+    "track_metrics": true,
+    "type": "gym_agent",
+    "P_max": 3000,
+    "actions": {
+      "price_ask": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+      "quantity_ask": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the  max accordingly? Min need to stay at 0
+
+      "price_bid": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
+      "quantity_bid": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
+      "storage": {"heuristic": "learned", "max": 10, "min": -10} //"learned", "greedy"
+    },
+    "learning": true,
+  "observations" : [
+                  "daytime_sin", "daytime_cos",
+                  "netload_now", "netload_settle", "netload_deliver",
+                  "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
+                  //"total_settled_quantity",
+                  //"avg_bid_price",// "max_bid_price", "min_bid_price",
+                  // "avg_bid_quantity",
+                  // "total_bid_quantity", //"std_bid_quantity",
+                   // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
+                    //"avg_ask_quantity",
+                    // "total_ask_quantity", //"std_ask_quantity",
+                  ], //
+    "reward_function": "grid_equivalent", // "economic_advantage", "net_profit", "grid_equivalent"
+    "use_synthetic_profile": "Building_6"
+  },
+  "load": {
+    "scale": 1
+  }, // do not change, the load will stay fixed at scale 1
+  "generation": {
+    "scale": 1
+  }, // do not change, the generation will stay fixed at scale 1
+  "storage": {  // (optional) Defines the storage system to be attached to a participant
+    "type": "Bess", // storage type, must exist in _devices
+    "capacity": 5000,  // Usable capacity defined in Wh
+    "power": 3000, // constant charge/discharge rate defined in W
     "efficiency": 0.95, // one way efficiency. round-trip efficiency is efficiency^2
     "monthly_sdr": 0.05 // monthly self-discharge rate as a fraction of usable capacity
 }

@@ -450,7 +450,9 @@ class Market:
         if 'bid' in self.__open[time_delivery]:
             self.__open[time_delivery]['bid'][:] = \
                 sorted([bid for bid in self.__open[time_delivery]['bid'] if bid['quantity'] > 0],
-                       key=itemgetter('quantity'), reverse=True)
+                       key=itemgetter('quantity'),
+                       # reverse=True
+                       )
             bids = self.__open[time_delivery]['bid']
 
             # Calculatre for stats for bids
@@ -477,7 +479,9 @@ class Market:
         if 'ask' in self.__open[time_delivery]:
             self.__open[time_delivery]['ask'][:] = \
                 sorted([ask for ask in self.__open[time_delivery]['ask'] if ask['quantity'] > 0],
-                       key=itemgetter('quantity'), reverse=False)
+                       key=itemgetter('quantity'),
+                       # reverse=False,
+                       )
             asks = self.__open[time_delivery]['ask']
 
             # Calculatre for stats for asks

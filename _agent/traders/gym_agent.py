@@ -8,6 +8,7 @@ import asyncio
 from multiprocessing import shared_memory
 import importlib
 import numpy as np
+import datetime
 
 #ToDo: make all actions learnable (ask price, ask quan, bid_price, bid_quan, battery)
 #ToDo: make the agent not wait until reward is a number, just pass through!
@@ -157,33 +158,38 @@ class Trader:
             n_rounds_current_to_r = (self.next_settle[0] - self.current_round[0]) / self.round_duration + n_rounds_obs_to_r
             obs_t_dict['reward_time_lag'] = n_rounds_current_to_r
 
-        if "t_now" in self.observation_variables:
-            obs_t_dict['t_now'] = self.current_round[0]
-        if 'generation_now' or 'load_now' in self.observation_variables:
+
+        if 'generation_now' in self.observation_variables or 'load_now' in self.observation_variables or 'netload_now' in self.observation_variables:
             gen_now, load_now = await self.__participant['read_profile'](self.current_round)
             if 'generation_now' in self.observation_variables:
                 obs_t_dict['generation_now'] = gen_now
             if 'load_now' in self.observation_variables:
                 obs_t_dict['load_now'] = load_now
+            if 'netload_now' in self.observation_variables:
+                obs_t_dict['netload_now'] = load_now - gen_now
 
         if "t_settle" in self.observation_variables:
             obs_t_dict['t_settle'] = self.next_settle[0]
-        if 'generation_settle' or 'load_settle' in self.observation_variables:
+        if 'generation_settle' in self.observation_variables or 'load_settle' in self.observation_variables or 'netload_settle' in self.observation_variables:
             gen_settle, load_settle = await self.__participant['read_profile'](self.next_settle)
             if 'generation_settle' in self.observation_variables:
                 obs_t_dict['generation_settle'] = gen_settle
             if 'load_settle' in self.observation_variables:
                 obs_t_dict['load_settle'] = load_settle
+            if 'netload_settle' in self.observation_variables:
+                obs_t_dict['netload_settle'] = load_settle - gen_settle
 
         if "t_deliver" in self.observation_variables:
             obs_t_dict['t_deliver'] = self.next_settle[0] + self.round_duration
-        if 'generation_deliver' or 'load_deliver' in self.observation_variables:
+        if 'generation_deliver' in self.observation_variables or 'load_deliver' in self.observation_variables or 'netload_deliver' in self.observation_variables:
             next_deliver = (self.next_settle[0] + self.round_duration, self.next_settle[1] + self.round_duration)
             gen_deliver, load_deliver = await self.__participant['read_profile'](next_deliver)
             if 'generation_deliver' in self.observation_variables:
                 obs_t_dict['generation_deliver'] = gen_deliver
             if 'load_deliver' in self.observation_variables:
                 obs_t_dict['load_deliver'] = load_deliver
+            if 'netload_deliver' in self.observation_variables:
+                obs_t_dict['netload_deliver'] = load_deliver - gen_deliver
 
         if 'SoC' in self.observation_variables:
             storage_schedule = await self.__participant['storage']['check_schedule'](self.next_settle)
@@ -209,10 +215,24 @@ class Trader:
             print('settle stats not available for participant', participant['id'], 'at timestep', self.next_settle, flush=True)
             # raise ValueError('Settle stats not available')
 
+
         # print('settle stats', settle_stats, flush=True)
         for obs in self.observation_variables:
             if obs in settle_stats:
                 obs_t_dict[obs] = self.__participant['market_info']['settle_stats'][obs]
+
+        if "daytime_sin" in self.observation_variables or "daytime_cos" in self.observation_variables:
+            t_now = self.next_settle[0] #this should be a timestamp, so we convert it using datetime into the hour format
+            t_now = datetime.datetime.fromtimestamp(t_now)
+            t_now = t_now.hour + t_now.minute/60 + t_now.second/3600
+            rad = 2 * np.pi * t_now / 24
+            # print('t_now', t_now, flush=True)
+            if 'daytime_sin' in self.observation_variables:
+                sin = np.sin(rad).tolist()
+                obs_t_dict['daytime_sin'] = sin
+            if 'daytime_cos' in self.observation_variables:
+                cos = np.cos(rad).tolist()
+                obs_t_dict['daytime_cos'] = cos
 
         #ToDo: needs to read grid price
         for obs in obs_t_dict:
@@ -268,15 +288,6 @@ class Trader:
         # print('entered act')
         # self.t_acts += 1
         # print('t_acts', self.t_acts, flush=True)
-
-        actions = {}
-        # TODO: these are going to have to go into the obs_creation method, waiting on daniel for these
-        bid_price = 0.0
-        bid_quantity = 0.0
-        solar_ask_price = 0.0
-        solar_ask_quantity = 0.0
-        bess_ask_price = 0.0
-        bees_ask_quantity = 0.0
 
         # Timing information
         timing = self.__participant['timing']
@@ -366,7 +377,7 @@ class Trader:
         """
 
         assert 'storage' in self.learned_actions, 'storage neither in learned actions'
-        storage_charge = self.learned_actions['storage']
+        storage_charge = self.learned_actions['storage'] *3000
 
         if 'price_bid' not in self.learned_actions:
             assert 'price_bid' in self.heuristic_actions, 'price_bid neither in learned actions nor in heuristic actions'
@@ -403,7 +414,7 @@ class Trader:
         decoded_action = dict()
         decoded_action['bids'] = { str(self.next_settle): {'quantity': quantity_bid, 'price': price_bid }}
         decoded_action['asks'] = {'solar': { str(self.next_settle): {'quantity': quantity_ask, 'price': price_ask }}}
-        decoded_action['bess'] = { str(self.next_settle): int(storage_charge) }
+        decoded_action['bess'] = { str(self.next_settle): storage_charge }
 
         return decoded_action
 
