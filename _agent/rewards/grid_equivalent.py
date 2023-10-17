@@ -28,13 +28,15 @@ class Reward:
         market_profit = sum([t[1] * t[2] for t in market_transactions if t[0] == 'ask'])
         market_sold_quantity = sum([t[1] for t in market_transactions if t[0] == 'ask'])
 
-       #  if market_sold_quantity > 0 or market_bought_quantity > 0:
-       #     print('yay, we got one')
-        grid_cost = (grid_transactions[0] + market_bought_quantity) * grid_transactions[1]
-        grid_profit = (grid_transactions[2] + market_sold_quantity) * grid_transactions[3]
+        # if market_sold_quantity > 0 or market_bought_quantity > 0:
+        #    print(market_transactions, grid_transactions, financial_transactions)
+        grid_bought_quantity = (grid_transactions[0] + market_bought_quantity)
+        grid_cost = grid_bought_quantity * grid_transactions[1]
+        grid_sold_quantity = (grid_transactions[2] + market_sold_quantity)
+        grid_profit = grid_sold_quantity * grid_transactions[3]
 
-        financial_cost = financial_transactions[0] if financial_transactions else 0
-        financial_profit = financial_transactions[1] if financial_transactions else 0
+        financial_cost =  0
+        financial_profit =  0
 
         total_profit = grid_profit + financial_profit
         total_cost = grid_cost + financial_cost

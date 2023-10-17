@@ -44,12 +44,11 @@
 
       "price_bid": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
       "quantity_bid": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
-      "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
+      "storage": {"heuristic": "learned", "max": 10, "min": -10} //"learned", "greedy"
     },
     "learning": true,
   "observations" : [
                   "daytime_sin", "daytime_cos",
-                  "yeartime_sin", "yeartime_cos",
                   "netload_now", "netload_settle", "netload_deliver",
                   "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
                   //"total_settled_quantity",
@@ -89,12 +88,11 @@
 
       "price_bid": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
       "quantity_bid": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
-      "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
+      "storage": {"heuristic": "learned", "max": 10, "min": -10} //"learned", "greedy"
     },
     "learning": true,
   "observations" : [
                   "daytime_sin", "daytime_cos",
-                  "yeartime_sin", "yeartime_cos",
                   "netload_now", "netload_settle", "netload_deliver",
                   "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
                   //"total_settled_quantity",
@@ -122,6 +120,7 @@
     "monthly_sdr": 0.05 // monthly self-discharge rate as a fraction of usable capacity
 }
 },
+
       "Building_3": { // I'd recommend keeping the name the same as the name of the synthetic profile
   "type": "Residential",
   "trader": {
@@ -134,12 +133,11 @@
 
       "price_bid": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
       "quantity_bid": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
-      "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
+      "storage": {"heuristic": "learned", "max": 10, "min": -10} //"learned", "greedy"
     },
     "learning": true,
   "observations" : [
                   "daytime_sin", "daytime_cos",
-                  "yeartime_sin", "yeartime_cos",
                   "netload_now", "netload_settle", "netload_deliver",
                   "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
                   //"total_settled_quantity",
@@ -167,6 +165,7 @@
     "monthly_sdr": 0.05 // monthly self-discharge rate as a fraction of usable capacity
 }
 },
+
       "Building_4": { // I'd recommend keeping the name the same as the name of the synthetic profile
   "type": "Residential",
   "trader": {
@@ -179,12 +178,11 @@
 
       "price_bid": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
       "quantity_bid": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
-     "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
+      "storage": {"heuristic": "learned", "max": 10, "min": -10} //"learned", "greedy"
     },
     "learning": true,
   "observations" : [
                   "daytime_sin", "daytime_cos",
-                  "yeartime_sin", "yeartime_cos",
                   "netload_now", "netload_settle", "netload_deliver",
                   "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
                   //"total_settled_quantity",
@@ -212,6 +210,7 @@
     "monthly_sdr": 0.05 // monthly self-discharge rate as a fraction of usable capacity
 }
 },
+
       "Building_5": { // I'd recommend keeping the name the same as the name of the synthetic profile
   "type": "Residential",
   "trader": {
@@ -224,12 +223,11 @@
 
       "price_bid": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
       "quantity_bid": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
-    "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
+      "storage": {"heuristic": "learned", "max": 10, "min": -10} //"learned", "greedy"
     },
     "learning": true,
   "observations" : [
                   "daytime_sin", "daytime_cos",
-                  "yeartime_sin", "yeartime_cos",
                   "netload_now", "netload_settle", "netload_deliver",
                   "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
                   //"total_settled_quantity",
@@ -257,6 +255,7 @@
     "monthly_sdr": 0.05 // monthly self-discharge rate as a fraction of usable capacity
 }
 },
+
       "Building_6": { // I'd recommend keeping the name the same as the name of the synthetic profile
   "type": "Residential",
   "trader": {
@@ -269,12 +268,11 @@
 
       "price_bid": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
       "quantity_bid": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
-    "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
+      "storage": {"heuristic": "learned", "max": 10, "min": -10} //"learned", "greedy"
     },
     "learning": true,
   "observations" : [
                   "daytime_sin", "daytime_cos",
-                  "yeartime_sin", "yeartime_cos",
                   "netload_now", "netload_settle", "netload_deliver",
                   "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
                   //"total_settled_quantity",
@@ -314,22 +312,21 @@
 
 "price_bid": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
 "quantity_bid": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
- "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
+"storage": {"heuristic": "learned", "max": 10, "min": -10} //"learned", "greedy"
 },
 "learning": true,
-  "observations" : [
-                  "daytime_sin", "daytime_cos",
-                  "yeartime_sin", "yeartime_cos",
-                  "netload_now", "netload_settle", "netload_deliver",
-                  "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-                  //"total_settled_quantity",
-                  //"avg_bid_price",// "max_bid_price", "min_bid_price",
-                  // "avg_bid_quantity",
-                  // "total_bid_quantity", //"std_bid_quantity",
-                   // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
-                    //"avg_ask_quantity",
-                    // "total_ask_quantity", //"std_ask_quantity",
-                  ], //
+"observations" : [
+            "daytime_sin", "daytime_cos",
+            "netload_now", "netload_settle", "netload_deliver",
+            "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
+            //"total_settled_quantity",
+            //"avg_bid_price",// "max_bid_price", "min_bid_price",
+            // "avg_bid_quantity",
+            // "total_bid_quantity", //"std_bid_quantity",
+             // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
+              //"avg_ask_quantity",
+              // "total_ask_quantity", //"std_ask_quantity",
+            ], //
 "reward_function": "grid_equivalent", // "economic_advantage", "net_profit", "grid_equivalent"
 "use_synthetic_profile": "Building_7"
 },
@@ -359,22 +356,21 @@
 
 "price_bid": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
 "quantity_bid": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
- "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
+"storage": {"heuristic": "learned", "max": 10, "min": -10} //"learned", "greedy"
 },
 "learning": true,
-  "observations" : [
-                  "daytime_sin", "daytime_cos",
-                  "yeartime_sin", "yeartime_cos",
-                  "netload_now", "netload_settle", "netload_deliver",
-                  "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-                  //"total_settled_quantity",
-                  //"avg_bid_price",// "max_bid_price", "min_bid_price",
-                  // "avg_bid_quantity",
-                  // "total_bid_quantity", //"std_bid_quantity",
-                   // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
-                    //"avg_ask_quantity",
-                    // "total_ask_quantity", //"std_ask_quantity",
-                  ], //
+"observations" : [
+            "daytime_sin", "daytime_cos",
+            "netload_now", "netload_settle", "netload_deliver",
+            "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
+            //"total_settled_quantity",
+            //"avg_bid_price",// "max_bid_price", "min_bid_price",
+            // "avg_bid_quantity",
+            // "total_bid_quantity", //"std_bid_quantity",
+             // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
+              //"avg_ask_quantity",
+              // "total_ask_quantity", //"std_ask_quantity",
+            ], //
 "reward_function": "grid_equivalent", // "economic_advantage", "net_profit", "grid_equivalent"
 "use_synthetic_profile": "Building_8"
 },
@@ -404,22 +400,21 @@
 
 "price_bid": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
 "quantity_bid": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
- "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
+"storage": {"heuristic": "learned", "max": 10, "min": -10} //"learned", "greedy"
 },
 "learning": true,
-  "observations" : [
-                  "daytime_sin", "daytime_cos",
-                  "yeartime_sin", "yeartime_cos",
-                  "netload_now", "netload_settle", "netload_deliver",
-                  "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-                  //"total_settled_quantity",
-                  //"avg_bid_price",// "max_bid_price", "min_bid_price",
-                  // "avg_bid_quantity",
-                  // "total_bid_quantity", //"std_bid_quantity",
-                   // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
-                    //"avg_ask_quantity",
-                    // "total_ask_quantity", //"std_ask_quantity",
-                  ], //
+"observations" : [
+            "daytime_sin", "daytime_cos",
+            "netload_now", "netload_settle", "netload_deliver",
+            "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
+            //"total_settled_quantity",
+            //"avg_bid_price",// "max_bid_price", "min_bid_price",
+            // "avg_bid_quantity",
+            // "total_bid_quantity", //"std_bid_quantity",
+             // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
+              //"avg_ask_quantity",
+              // "total_ask_quantity", //"std_ask_quantity",
+            ], //
 "reward_function": "grid_equivalent", // "economic_advantage", "net_profit", "grid_equivalent"
 "use_synthetic_profile": "Building_9"
 },
@@ -449,22 +444,21 @@
 
 "price_bid": {"heuristic": "fixed", "max": 0.1449, "min":  0.069},// "learned, keep the min and max the same as the market
 "quantity_bid": {"heuristic": "netload", "max": 10, "min": 0}, // "learned, adjust the max accordingly? Min need to stay at 0
- "storage": {"heuristic": "learned", "max": 3000, "min": -3000} //"learned", "greedy"
+"storage": {"heuristic": "learned", "max": 10, "min": -10} //"learned", "greedy"
 },
 "learning": true,
-  "observations" : [
-                  "daytime_sin", "daytime_cos",
-                  "yeartime_sin", "yeartime_cos",
-                  "netload_now", "netload_settle", "netload_deliver",
-                  "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-                  //"total_settled_quantity",
-                  //"avg_bid_price",// "max_bid_price", "min_bid_price",
-                  // "avg_bid_quantity",
-                  // "total_bid_quantity", //"std_bid_quantity",
-                   // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
-                    //"avg_ask_quantity",
-                    // "total_ask_quantity", //"std_ask_quantity",
-                  ], //
+"observations" : [
+            "daytime_sin", "daytime_cos",
+            "netload_now", "netload_settle", "netload_deliver",
+            "SoC", //SoC is default provided for t_settle, because that's the time we're scheduling actions for
+            //"total_settled_quantity",
+            //"avg_bid_price",// "max_bid_price", "min_bid_price",
+            // "avg_bid_quantity",
+            // "total_bid_quantity", //"std_bid_quantity",
+             // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
+              //"avg_ask_quantity",
+              // "total_ask_quantity", //"std_ask_quantity",
+            ], //
 "reward_function": "grid_equivalent", // "economic_advantage", "net_profit", "grid_equivalent"
 "use_synthetic_profile": "Building_10"
 },
