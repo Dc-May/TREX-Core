@@ -6,7 +6,7 @@
       "start_datetime": "2016-08-01 0:0:0", // do not change,
       "start_datetime_sequence": "sequential", // do not change,
       "timezone": "America/Vancouver", // do not change,
-      "days": 100, //Change if we want more days, goes up to 365
+      "days": 30, //Change if we want more days, goes up to 365
       "time_step_size": 3600, // do not change, 1 hour
       "generations": 100000 //Change if we want more generations
 //      "profiles_db_location": "taken from configs"

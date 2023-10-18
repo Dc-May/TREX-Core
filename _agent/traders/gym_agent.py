@@ -182,8 +182,7 @@ class Trader:
         if "t_deliver" in self.observation_variables:
             obs_t_dict['t_deliver'] = self.next_settle[0] + self.round_duration
         if 'generation_deliver' in self.observation_variables or 'load_deliver' in self.observation_variables or 'netload_deliver' in self.observation_variables:
-            next_deliver = (self.next_settle[0] + self.round_duration, self.next_settle[1] + self.round_duration)
-            gen_deliver, load_deliver = await self.__participant['read_profile'](next_deliver)
+            gen_deliver, load_deliver = await self.__participant['read_profile'](self.next_deliver)
             if 'generation_deliver' in self.observation_variables:
                 obs_t_dict['generation_deliver'] = gen_deliver
             if 'load_deliver' in self.observation_variables:
@@ -191,35 +190,36 @@ class Trader:
             if 'netload_deliver' in self.observation_variables:
                 obs_t_dict['netload_deliver'] = load_deliver - gen_deliver
 
-        if 'SoC' in self.observation_variables:
+        if 'SoC_settle' in self.observation_variables:
             storage_schedule = await self.__participant['storage']['check_schedule'](self.next_settle)
             soc = storage_schedule[self.next_settle]['projected_soc_end']
-            obs_t_dict['SoC'] = soc
+            obs_t_dict['SoC_settle'] = soc
 
-        # collect the settle stats if necessary
-        settle_stats = self.__participant['market_info']['settle_stats']
-        participant = self.__participant
-        if 'settled_time' in settle_stats:
-            ts_settle_stats = settle_stats['settled_time']
-            ts_settle_stats = str(tuple(ts_settle_stats))
-
-            if ts_settle_stats in participant['market_info']:
-                grid_stats = participant['market_info'][ts_settle_stats]
-                grid_sell_price = grid_stats['grid']['sell_price']
-                grid_buy_price = grid_stats['grid']['buy_price']
-                assert grid_buy_price >= grid_sell_price, 'grid buy price should be higher than grid sell price'
-            else:
-                print('grid stats not available for participant', participant['id'], 'at timestep', self.next_settle, flush=True)
-                # raise ValueError('Grid stats not available')
-        else:
-            print('settle stats not available for participant', participant['id'], 'at timestep', self.next_settle, flush=True)
-            # raise ValueError('Settle stats not available')
-
-
-        # print('settle stats', settle_stats, flush=True)
-        for obs in self.observation_variables:
-            if obs in settle_stats:
-                obs_t_dict[obs] = self.__participant['market_info']['settle_stats'][obs]
+        # ToDo: revert this once market issues are solved
+        # # collect the settle stats if necessary
+        # settle_stats = self.__participant['market_info']['settle_stats']
+        # participant = self.__participant
+        # if 'settled_time' in settle_stats:
+        #     ts_settle_stats = settle_stats['settled_time']
+        #     ts_settle_stats = str(tuple(ts_settle_stats))
+        #
+        #     if ts_settle_stats in participant['market_info']:
+        #         grid_stats = participant['market_info'][ts_settle_stats]
+        #         grid_sell_price = grid_stats['grid']['sell_price']
+        #         grid_buy_price = grid_stats['grid']['buy_price']
+        #         assert grid_buy_price >= grid_sell_price, 'grid buy price should be higher than grid sell price'
+        #     else:
+        #         print('grid stats not available for participant', participant['id'], 'at timestep', self.next_settle, flush=True)
+        #         # raise ValueError('Grid stats not available')
+        # else:
+        #     print('settle stats not available for participant', participant['id'], 'at timestep', self.next_settle, flush=True)
+        #     # raise ValueError('Settle stats not available')
+        #
+        #
+        # # print('settle stats', settle_stats, flush=True)
+        # for obs in self.observation_variables:
+        #     if obs in settle_stats:
+        #         obs_t_dict[obs] = self.__participant['market_info']['settle_stats'][obs]
 
         if "daytime_sin" in self.observation_variables or "daytime_cos" in self.observation_variables:
             t_now = self.next_settle[0] #this should be a timestamp, so we convert it using datetime into the hour format
@@ -233,6 +233,18 @@ class Trader:
             if 'daytime_cos' in self.observation_variables:
                 cos = np.cos(rad).tolist()
                 obs_t_dict['daytime_cos'] = cos
+
+        if "yeartime_sin" in self.observation_variables or "yeartime_cos" in self.observation_variables:
+            t_now = self.next_settle[0] #this should be a timestamp, so we convert it using datetime into the hour format
+            # t_now = datetime.datetime.fromtimestamp(t_now) #ToDo: stuff is in seconds rn anyways
+            rad = 2 * np.pi * t_now / (365 * 24 * 60 * 60)
+            # print('t_now', t_now, flush=True)
+            if 'yeartime_sin' in self.observation_variables:
+                sin = np.sin(rad).tolist()
+                obs_t_dict['yeartime_sin'] = sin
+            if 'yeartime_cos' in self.observation_variables:
+                cos = np.cos(rad).tolist()
+                obs_t_dict['yeartime_cos'] = cos
 
         #ToDo: needs to read grid price
         for obs in obs_t_dict:
@@ -296,6 +308,7 @@ class Trader:
         self.next_round = (self.current_round[0]+self.round_duration, self.current_round[1]+self.round_duration)
         self.last_settle = self.__participant['timing']['last_settle']
         self.next_settle = self.__participant['timing']['next_settle']
+        self.next_deliver = (self.next_settle[0] + self.round_duration, self.next_settle[1] + self.round_duration)
         self.last_round = timing['last_round']
 
         obs_t = await self.pre_process_obs()
@@ -375,9 +388,12 @@ class Trader:
         3. A storage action
 
         """
-
         assert 'storage' in self.learned_actions, 'storage neither in learned actions'
-        storage_charge = self.learned_actions['storage'] *3000
+        target_storage_charge = self.learned_actions['storage'] *3000
+        target_storage_charge = min(max(target_storage_charge, -3000), 3000)
+        storage_schedule = await self.__participant['storage']['check_schedule'](self.next_settle)
+        min_max_storage_charge = storage_schedule[self.next_settle]['energy_potential']
+        storage_charge = min(max(target_storage_charge, min_max_storage_charge[0]), min_max_storage_charge[1])
 
         if 'price_bid' not in self.learned_actions:
             assert 'price_bid' in self.heuristic_actions, 'price_bid neither in learned actions nor in heuristic actions'
@@ -394,18 +410,19 @@ class Trader:
         price_ask = self.learned_actions['price_ask'] if 'price_ask' in self.learned_actions else self.heuristic_actions['price_ask']
 
         # calculate the net-load for next settle
+
         gen_settle, load_settle = await self.__participant['read_profile'](self.next_settle)
         net_load = load_settle - gen_settle + storage_charge #ToDo:make sure this is the right way around!
         if 'quantity_bid' not in self.learned_actions:
             assert 'quantity_bid' in self.heuristic_actions, 'quantity_bid neither in learned actions nor in heuristic actions'
-            self.heuristic_actions['quantity_bid'] = max(0, net_load)
+            self.heuristic_actions['quantity_bid'] = 0# max(0, net_load)
         else:
             assert self.learned_actions['quantity_bid'] is not None
         quantity_bid = self.learned_actions['quantity_bid'] if 'quantity_bid' in self.learned_actions else self.heuristic_actions['quantity_bid']
 
         if 'quantity_ask' not in self.learned_actions:
             assert 'quantity_ask' in self.heuristic_actions, 'quantity_ask neither in learned actions nor in heuristic actions'
-            self.heuristic_actions['quantity_ask'] = max(0, -net_load)
+            self.heuristic_actions['quantity_ask'] = 0# max(0, -net_load)
         else:
             assert self.learned_actions['quantity_ask'] is not None
         quantity_ask = self.learned_actions['quantity_ask'] if 'quantity_ask' in self.learned_actions else self.heuristic_actions['quantity_ask']
