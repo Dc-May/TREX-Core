@@ -397,7 +397,7 @@ class Controller:
                     print('Generation transition triggered simultaneously with natural transition', flush=True)
                 else:
                     print('Generation transition triggered', flush=True)
-                    self.__current_step = self.__end_step + 1
+                    self.__current_step = self.__end_step + 2 #ToDo: something here is fucking up the market reset??
 
                 kill_list[3] = False #reset command has been executed
 
@@ -434,7 +434,7 @@ class Controller:
             await self.__client.emit('start_round_simulation', message)
         # end of generation
 
-        elif self.__current_step == self.__end_step + 1: #ToDo: maybe allow this to be a greater than end_step
+        elif self.__current_step > self.__end_step: #ToDo: maybe allow this to be a greater than end_step
 
             self.__turn_control.update({
                 'ready': 0,

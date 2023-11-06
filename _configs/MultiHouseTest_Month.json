@@ -1,7 +1,7 @@
 {
   "version": "3.7.0",
   "study": {
-    "name": "EpisodeTests_net_profit_Reward", // 0bat mean: -79.56335297601616, -netload_deliver mean: -71.43055064525711
+    "name": "EpisodeTests_net_profit_Reward", // 0bat mean: -79.56335297601616, -netload_deliver mean: -71.43055064525711, total improvement: 8.132802330759048
       "description": "",
       "start_datetime": "2016-08-01 0:0:0", // do not change,
       "start_datetime_sequence": "sequential", // do not change,
