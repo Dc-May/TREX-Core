@@ -1270,6 +1270,7 @@ class Market:
 
     async def end_sim_generation(self):
         # print('recording transactions')
+        #  print('maybe this shit is getting called, who knows')
         await self.record_transactions(delay=False)
         # print('transactions recorded')
         # await self.__ensure_transactions_complete()

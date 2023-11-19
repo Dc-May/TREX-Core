@@ -8,6 +8,7 @@ import multiprocessing as mp
 from TREX_Core._clients.sim_controller.training_controller import TrainingController
 from TREX_Core._utils import utils, db_utils
 import sqlalchemy_utils
+import numpy as np
 
 class Controller:
     '''
@@ -397,10 +398,9 @@ class Controller:
                     print('Generation transition triggered simultaneously with natural transition', flush=True)
                 else:
                     print('Generation transition triggered', flush=True)
-                    self.__current_step = self.__end_step + 2 #ToDo: something here is fucking up the market reset??
+                    self.__current_step = np.inf #ToDo: something here is fucking up the market reset??
 
                 kill_list[3] = False #reset command has been executed
-
 
         if not self.status['sim_started']:
             return

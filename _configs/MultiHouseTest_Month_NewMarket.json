@@ -23,7 +23,9 @@
 
     "market": {
       "id": "",
-      "type": "MicroTE3DCM_simple",
+      "type": "MicroTE3DCM_even_simpler",
+      // no batteries             no market: 0                      MicroTE3DCM_simple: 4.723780547137312,    MicroTE3DCM_even_simpler 4.646189197380778
+      // Greedy (-net_set)        no market:  8.129579796950543                          10.190324238617912                            10.168231200532611
       "close_steps": 2,
       "grid": {
         "price": 0.069,
@@ -79,19 +81,22 @@
           "daytime_cos",
           "yeartime_sin",
           "yeartime_cos",
-          "netload_settle", //"netload_deliver",
-          "SoC_settle"
-          //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-          //"total_settled_quantity",
-          //"avg_bid_price",// "max_bid_price", "min_bid_price",
-          // "avg_bid_quantity",
-          // "total_bid_quantity", //"std_bid_quantity",
-          // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
-          //"avg_ask_quantity",
-          // "total_ask_quantity", //"std_ask_quantity",
+          "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
+          "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "avg_bid_price",
+          "total_bid_quantity",
+          "avg_ask_price",
+          "total_ask_quantity"
+
+          //"avg_ask_quantity",       // might not be needed since market settles in expecation
+          // "avg_bid_quantity",      // might not be needed since market settles in expecation
+          //"std_ask_quantity",       // might not be needed since market settles in expecation
+          // "std_bid_quantity",      // might not be needed since market settles in expecation
+          //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "grid_equivalent",
+        "reward_function": "net_profit",
         // "economic_advantage", "net_profit", "grid_equivalent"
         "use_synthetic_profile": "Building_1"
       },
@@ -164,19 +169,22 @@
           "daytime_cos",
           "yeartime_sin",
           "yeartime_cos",
-          "netload_settle", //"netload_deliver",
-          "SoC_settle"
-          //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-          //"total_settled_quantity",
-          //"avg_bid_price",// "max_bid_price", "min_bid_price",
-          // "avg_bid_quantity",
-          // "total_bid_quantity", //"std_bid_quantity",
-          // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
-          //"avg_ask_quantity",
-          // "total_ask_quantity", //"std_ask_quantity",
+          "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
+          "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "avg_bid_price",
+          "total_bid_quantity",
+          "avg_ask_price",
+          "total_ask_quantity"
+
+          //"avg_ask_quantity",       // might not be needed since market settles in expecation
+          // "avg_bid_quantity",      // might not be needed since market settles in expecation
+          //"std_ask_quantity",       // might not be needed since market settles in expecation
+          // "std_bid_quantity",      // might not be needed since market settles in expecation
+          //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "grid_equivalent",
+        "reward_function": "net_profit",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_2"
       },
@@ -249,19 +257,22 @@
           "daytime_cos",
           "yeartime_sin",
           "yeartime_cos",
-          "netload_settle", //"netload_deliver",
-          "SoC_settle"
-          //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-          //"total_settled_quantity",
-          //"avg_bid_price",// "max_bid_price", "min_bid_price",
-          // "avg_bid_quantity",
-          // "total_bid_quantity", //"std_bid_quantity",
-          // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
-          //"avg_ask_quantity",
-          // "total_ask_quantity", //"std_ask_quantity",
+          "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
+          "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "avg_bid_price",
+          "total_bid_quantity",
+          "avg_ask_price",
+          "total_ask_quantity"
+
+          //"avg_ask_quantity",       // might not be needed since market settles in expecation
+          // "avg_bid_quantity",      // might not be needed since market settles in expecation
+          //"std_ask_quantity",       // might not be needed since market settles in expecation
+          // "std_bid_quantity",      // might not be needed since market settles in expecation
+          //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "grid_equivalent",
+        "reward_function": "net_profit",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_3"
       },
@@ -334,19 +345,22 @@
           "daytime_cos",
           "yeartime_sin",
           "yeartime_cos",
-          "netload_settle", //"netload_deliver",
-          "SoC_settle"
-          //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-          //"total_settled_quantity",
-          //"avg_bid_price",// "max_bid_price", "min_bid_price",
-          // "avg_bid_quantity",
-          // "total_bid_quantity", //"std_bid_quantity",
-          // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
-          //"avg_ask_quantity",
-          // "total_ask_quantity", //"std_ask_quantity",
+          "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
+          "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "avg_bid_price",
+          "total_bid_quantity",
+          "avg_ask_price",
+          "total_ask_quantity"
+
+          //"avg_ask_quantity",       // might not be needed since market settles in expecation
+          // "avg_bid_quantity",      // might not be needed since market settles in expecation
+          //"std_ask_quantity",       // might not be needed since market settles in expecation
+          // "std_bid_quantity",      // might not be needed since market settles in expecation
+          //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "grid_equivalent",
+        "reward_function": "net_profit",
         // "economic_advantage", "net_profit", grid_equivalent
         "use_synthetic_profile": "Building_4"
       },
@@ -419,19 +433,22 @@
           "daytime_cos",
           "yeartime_sin",
           "yeartime_cos",
-          "netload_settle", //"netload_deliver",
-          "SoC_settle"
-          //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-          //"total_settled_quantity",
-          //"avg_bid_price",// "max_bid_price", "min_bid_price",
-          // "avg_bid_quantity",
-          // "total_bid_quantity", //"std_bid_quantity",
-          // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
-          //"avg_ask_quantity",
-          // "total_ask_quantity", //"std_ask_quantity",
+          "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
+          "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "avg_bid_price",
+          "total_bid_quantity",
+          "avg_ask_price",
+          "total_ask_quantity"
+
+          //"avg_ask_quantity",       // might not be needed since market settles in expecation
+          // "avg_bid_quantity",      // might not be needed since market settles in expecation
+          //"std_ask_quantity",       // might not be needed since market settles in expecation
+          // "std_bid_quantity",      // might not be needed since market settles in expecation
+          //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "grid_equivalent",
+        "reward_function": "net_profit",
         // "economic_advantage", "net_profit", grid_equivalent
         "use_synthetic_profile": "Building_5"
       },
@@ -504,19 +521,22 @@
           "daytime_cos",
           "yeartime_sin",
           "yeartime_cos",
-          "netload_settle", //"netload_deliver",
-          "SoC_settle"
-          //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-          //"total_settled_quantity",
-          //"avg_bid_price",// "max_bid_price", "min_bid_price",
-          // "avg_bid_quantity",
-          // "total_bid_quantity", //"std_bid_quantity",
-          // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
-          //"avg_ask_quantity",
-          // "total_ask_quantity", //"std_ask_quantity",
+          "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
+          "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "avg_bid_price",
+          "total_bid_quantity",
+          "avg_ask_price",
+          "total_ask_quantity"
+
+          //"avg_ask_quantity",       // might not be needed since market settles in expecation
+          // "avg_bid_quantity",      // might not be needed since market settles in expecation
+          //"std_ask_quantity",       // might not be needed since market settles in expecation
+          // "std_bid_quantity",      // might not be needed since market settles in expecation
+          //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "grid_equivalent",
+        "reward_function": "net_profit",
         // "economic_advantage", "net_profit", grid_equivalent
         "use_synthetic_profile": "Building_6"
       },
@@ -589,19 +609,22 @@
           "daytime_cos",
           "yeartime_sin",
           "yeartime_cos",
-          "netload_settle", //"netload_deliver",
-          "SoC_settle"
-          //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-          //"total_settled_quantity",
-          //"avg_bid_price",// "max_bid_price", "min_bid_price",
-          // "avg_bid_quantity",
-          // "total_bid_quantity", //"std_bid_quantity",
-          // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
-          //"avg_ask_quantity",
-          // "total_ask_quantity", //"std_ask_quantity",
+          "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
+          "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "avg_bid_price",
+          "total_bid_quantity",
+          "avg_ask_price",
+          "total_ask_quantity"
+
+          //"avg_ask_quantity",       // might not be needed since market settles in expecation
+          // "avg_bid_quantity",      // might not be needed since market settles in expecation
+          //"std_ask_quantity",       // might not be needed since market settles in expecation
+          // "std_bid_quantity",      // might not be needed since market settles in expecation
+          //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "grid_equivalent",
+        "reward_function": "net_profit",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_7"
       },
@@ -674,19 +697,22 @@
           "daytime_cos",
           "yeartime_sin",
           "yeartime_cos",
-          "netload_settle", //"netload_deliver",
-          "SoC_settle"
-          //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-          //"total_settled_quantity",
-          //"avg_bid_price",// "max_bid_price", "min_bid_price",
-          // "avg_bid_quantity",
-          // "total_bid_quantity", //"std_bid_quantity",
-          // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
-          //"avg_ask_quantity",
-          // "total_ask_quantity", //"std_ask_quantity",
+          "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
+          "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "avg_bid_price",
+          "total_bid_quantity",
+          "avg_ask_price",
+          "total_ask_quantity"
+
+          //"avg_ask_quantity",       // might not be needed since market settles in expecation
+          // "avg_bid_quantity",      // might not be needed since market settles in expecation
+          //"std_ask_quantity",       // might not be needed since market settles in expecation
+          // "std_bid_quantity",      // might not be needed since market settles in expecation
+          //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "grid_equivalent",
+        "reward_function": "net_profit",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_8"
       },
@@ -759,19 +785,22 @@
           "daytime_cos",
           "yeartime_sin",
           "yeartime_cos",
-          "netload_settle", //"netload_deliver",
-          "SoC_settle"
-          //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-          //"total_settled_quantity",
-          //"avg_bid_price",// "max_bid_price", "min_bid_price",
-          // "avg_bid_quantity",
-          // "total_bid_quantity", //"std_bid_quantity",
-          // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
-          //"avg_ask_quantity",
-          // "total_ask_quantity", //"std_ask_quantity",
+          "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
+          "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "avg_bid_price",
+          "total_bid_quantity",
+          "avg_ask_price",
+          "total_ask_quantity"
+
+          //"avg_ask_quantity",       // might not be needed since market settles in expecation
+          // "avg_bid_quantity",      // might not be needed since market settles in expecation
+          //"std_ask_quantity",       // might not be needed since market settles in expecation
+          // "std_bid_quantity",      // might not be needed since market settles in expecation
+          //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "grid_equivalent",
+        "reward_function": "net_profit",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_9"
       },
@@ -844,19 +873,22 @@
           "daytime_cos",
           "yeartime_sin",
           "yeartime_cos",
-          "netload_settle", //"netload_deliver",
-          "SoC_settle"
-          //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-          //"total_settled_quantity",
-          //"avg_bid_price",// "max_bid_price", "min_bid_price",
-          // "avg_bid_quantity",
-          // "total_bid_quantity", //"std_bid_quantity",
-          // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
-          //"avg_ask_quantity",
-          // "total_ask_quantity", //"std_ask_quantity",
+          "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
+          "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "avg_bid_price",
+          "total_bid_quantity",
+          "avg_ask_price",
+          "total_ask_quantity"
+
+          //"avg_ask_quantity",       // might not be needed since market settles in expecation
+          // "avg_bid_quantity",      // might not be needed since market settles in expecation
+          //"std_ask_quantity",       // might not be needed since market settles in expecation
+          // "std_bid_quantity",      // might not be needed since market settles in expecation
+          //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "grid_equivalent",
+        "reward_function": "net_profit",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_10"
       },
@@ -929,19 +961,22 @@
           "daytime_cos",
           "yeartime_sin",
           "yeartime_cos",
-          "netload_settle", //"netload_deliver",
-          "SoC_settle"
-          //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-          //"total_settled_quantity",
-          //"avg_bid_price",// "max_bid_price", "min_bid_price",
-          // "avg_bid_quantity",
-          // "total_bid_quantity", //"std_bid_quantity",
-          // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
-          //"avg_ask_quantity",
-          // "total_ask_quantity", //"std_ask_quantity",
+          "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
+          "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "avg_bid_price",
+          "total_bid_quantity",
+          "avg_ask_price",
+          "total_ask_quantity"
+
+          //"avg_ask_quantity",       // might not be needed since market settles in expecation
+          // "avg_bid_quantity",      // might not be needed since market settles in expecation
+          //"std_ask_quantity",       // might not be needed since market settles in expecation
+          // "std_bid_quantity",      // might not be needed since market settles in expecation
+          //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "grid_equivalent",
+        "reward_function": "net_profit",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_11"
       },
@@ -1014,19 +1049,22 @@
           "daytime_cos",
           "yeartime_sin",
           "yeartime_cos",
-          "netload_settle", //"netload_deliver",
-          "SoC_settle"
-          //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-          //"total_settled_quantity",
-          //"avg_bid_price",// "max_bid_price", "min_bid_price",
-          // "avg_bid_quantity",
-          // "total_bid_quantity", //"std_bid_quantity",
-          // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
-          //"avg_ask_quantity",
-          // "total_ask_quantity", //"std_ask_quantity",
+          "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
+          "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "avg_bid_price",
+          "total_bid_quantity",
+          "avg_ask_price",
+          "total_ask_quantity"
+
+          //"avg_ask_quantity",       // might not be needed since market settles in expecation
+          // "avg_bid_quantity",      // might not be needed since market settles in expecation
+          //"std_ask_quantity",       // might not be needed since market settles in expecation
+          // "std_bid_quantity",      // might not be needed since market settles in expecation
+          //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "grid_equivalent",
+        "reward_function": "net_profit",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_12"
       },
@@ -1099,19 +1137,22 @@
           "daytime_cos",
           "yeartime_sin",
           "yeartime_cos",
-          "netload_settle", //"netload_deliver",
-          "SoC_settle"
-          //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-          //"total_settled_quantity",
-          //"avg_bid_price",// "max_bid_price", "min_bid_price",
-          // "avg_bid_quantity",
-          // "total_bid_quantity", //"std_bid_quantity",
-          // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
-          //"avg_ask_quantity",
-          // "total_ask_quantity", //"std_ask_quantity",
+          "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
+          "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "avg_bid_price",
+          "total_bid_quantity",
+          "avg_ask_price",
+          "total_ask_quantity"
+
+          //"avg_ask_quantity",       // might not be needed since market settles in expecation
+          // "avg_bid_quantity",      // might not be needed since market settles in expecation
+          //"std_ask_quantity",       // might not be needed since market settles in expecation
+          // "std_bid_quantity",      // might not be needed since market settles in expecation
+          //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "grid_equivalent",
+        "reward_function": "net_profit",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_13"
       },
@@ -1184,19 +1225,22 @@
           "daytime_cos",
           "yeartime_sin",
           "yeartime_cos",
-          "netload_settle", //"netload_deliver",
-          "SoC_settle"
-          //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-          //"total_settled_quantity",
-          //"avg_bid_price",// "max_bid_price", "min_bid_price",
-          // "avg_bid_quantity",
-          // "total_bid_quantity", //"std_bid_quantity",
-          // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
-          //"avg_ask_quantity",
-          // "total_ask_quantity", //"std_ask_quantity",
+          "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
+          "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "avg_bid_price",
+          "total_bid_quantity",
+          "avg_ask_price",
+          "total_ask_quantity"
+
+          //"avg_ask_quantity",       // might not be needed since market settles in expecation
+          // "avg_bid_quantity",      // might not be needed since market settles in expecation
+          //"std_ask_quantity",       // might not be needed since market settles in expecation
+          // "std_bid_quantity",      // might not be needed since market settles in expecation
+          //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "grid_equivalent",
+        "reward_function": "net_profit",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_14"
       },
@@ -1269,19 +1313,22 @@
           "daytime_cos",
           "yeartime_sin",
           "yeartime_cos",
-          "netload_settle", //"netload_deliver",
-          "SoC_settle"
-          //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-          //"total_settled_quantity",
-          //"avg_bid_price",// "max_bid_price", "min_bid_price",
-          // "avg_bid_quantity",
-          // "total_bid_quantity", //"std_bid_quantity",
-          // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
-          //"avg_ask_quantity",
-          // "total_ask_quantity", //"std_ask_quantity",
+          "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
+          "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "avg_bid_price",
+          "total_bid_quantity",
+          "avg_ask_price",
+          "total_ask_quantity"
+
+          //"avg_ask_quantity",       // might not be needed since market settles in expecation
+          // "avg_bid_quantity",      // might not be needed since market settles in expecation
+          //"std_ask_quantity",       // might not be needed since market settles in expecation
+          // "std_bid_quantity",      // might not be needed since market settles in expecation
+          //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "grid_equivalent",
+        "reward_function": "net_profit",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_15"
       },
@@ -1354,19 +1401,22 @@
           "daytime_cos",
           "yeartime_sin",
           "yeartime_cos",
-          "netload_settle", //"netload_deliver",
-          "SoC_settle"
-          //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-          //"total_settled_quantity",
-          //"avg_bid_price",// "max_bid_price", "min_bid_price",
-          // "avg_bid_quantity",
-          // "total_bid_quantity", //"std_bid_quantity",
-          // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
-          //"avg_ask_quantity",
-          // "total_ask_quantity", //"std_ask_quantity",
+          "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
+          "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "avg_bid_price",
+          "total_bid_quantity",
+          "avg_ask_price",
+          "total_ask_quantity"
+
+          //"avg_ask_quantity",       // might not be needed since market settles in expecation
+          // "avg_bid_quantity",      // might not be needed since market settles in expecation
+          //"std_ask_quantity",       // might not be needed since market settles in expecation
+          // "std_bid_quantity",      // might not be needed since market settles in expecation
+          //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "grid_equivalent",
+        "reward_function": "net_profit",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_16"
       },
@@ -1439,19 +1489,22 @@
           "daytime_cos",
           "yeartime_sin",
           "yeartime_cos",
-          "netload_settle", //"netload_deliver",
-          "SoC_settle"
-          //SoC is default provided for t_settle, because that's the time we're scheduling actions for
-          //"total_settled_quantity",
-          //"avg_bid_price",// "max_bid_price", "min_bid_price",
-          // "avg_bid_quantity",
-          // "total_bid_quantity", //"std_bid_quantity",
-          // "avg_ask_price",// "max_ask_price" ,"min_ask_price",
-          //"avg_ask_quantity",
-          // "total_ask_quantity", //"std_ask_quantity",
+          "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
+          "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "avg_bid_price",
+          "total_bid_quantity",
+          "avg_ask_price",
+          "total_ask_quantity"
+
+          //"avg_ask_quantity",       // might not be needed since market settles in expecation
+          // "avg_bid_quantity",      // might not be needed since market settles in expecation
+          //"std_ask_quantity",       // might not be needed since market settles in expecation
+          // "std_bid_quantity",      // might not be needed since market settles in expecation
+          //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "grid_equivalent",
+        "reward_function": "net_profit",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_17"
       },

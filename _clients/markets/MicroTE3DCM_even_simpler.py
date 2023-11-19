@@ -9,6 +9,7 @@ import tenacity
 import os
 import signal
 import statistics
+from copy import deepcopy
 
 import asyncio
 from TREX_Core._clients.markets.Grid import Market as Grid
@@ -429,8 +430,17 @@ class Market:
         """Matches bids with asks for a single source type in a time slot
 
         THe matching and settlement process closely resemble double auctions.
-        For all bids/asks for a source in the delivery time slots, highest bids are matched with lowest asks
-        and settled pairwise. Quantities can be partially settled. Unsettled quantities are discarded. Participants are only obligated to buy/sell quantities settled for the delivery period.
+        In Original market:
+            For all bids/asks for a source in the delivery time slots, highest bids are matched with lowest ask and settled pairwise. Quantities can be partially settled.
+            Unsettled quantities are discarded.
+            Participants are only obligated to buy/sell quantities settled for the delivery period.
+
+        In this market:
+            all bids and asks are auto-assigned a price as a function of the supply : demand ratio (see Zhang et al.)
+            Then this market uses an expectation formulation of the original settlement mechanism. The goal here is to provide more predictable settlements
+            all bids and asks are sorted from lowest to highest quantity
+            we then calculate the expected settlement if the original settlement mechanism was used
+
 
         Parameters
         ----------
@@ -453,27 +463,7 @@ class Market:
                        key=itemgetter('quantity'),
                        # reverse=True
                        )
-            bids = self.__open[time_delivery]['bid']
-
-            # Calculatre for stats for bids
-            # self.__round_bid_stats['max_bid_price'] = np.amax([bid['price'] for bid in bids])
-            # self.__round_bid_stats['min_bid_price'] = np.amin([bid['price'] for bid in bids])
-            self.__round_bid_stats['avg_bid_price'] = self.__grid.buy_price()
-            # self.__round_bid_stats['max_bid_quantity'] = max(bids, key=itemgetter('quantity'))['quantity']
-            # self.__round_bid_stats['min_bid_quantity'] = min(bids, key=itemgetter('quantity'))['quantity']
-            self.__round_bid_stats['avg_bid_quantity'] = np.mean([bid['quantity'] for bid in bids])
-            self.__round_bid_stats['total_bid_quantity'] = sum([bid['quantity'] for bid in bids])
-            self.__round_bid_stats['std_bid_quantity'] = np.std([bid['quantity'] for bid in bids])
-        else:
-            # self.__round_bid_stats['max_bid_price'] = self.__grid.buy_price()
-            # self.__round_bid_stats['min_bid_price'] = self.__grid.buy_price()
-            self.__round_bid_stats['avg_bid_price'] = self.__grid.buy_price()
-            # self.__round_bid_stats['max_bid_quantity'] = 0
-            # self.__round_bid_stats['min_bid_quantity'] = 0
-            self.__round_bid_stats['avg_bid_quantity'] = 0
-            self.__round_bid_stats['total_bid_quantity'] = 0
-            self.__round_bid_stats['std_bid_quantity'] = 0
-
+            bids = self.__open[time_delivery]['bid'] #ToDo: make sure these are sorted from lowest to highest
 
         # if 'asks exist, collect stats
         if 'ask' in self.__open[time_delivery]:
@@ -482,26 +472,7 @@ class Market:
                        key=itemgetter('quantity'),
                        # reverse=False,
                        )
-            asks = self.__open[time_delivery]['ask']
-
-            # Calculatre for stats for asks
-            # self.__round_ask_stats['max_ask_price'] = np.amax([ask['price'] for ask in asks])
-            # self.__round_ask_stats['min_ask_price'] = np.amin([ask['price'] for ask in asks])
-            self.__round_ask_stats['avg_ask_price'] = self.__grid.sell_price()
-            # self.__round_ask_stats['max_ask_quantity'] = max(asks, key=itemgetter('quantity'))['quantity']
-            # self.__round_ask_stats['min_ask_quantity'] = min(asks, key=itemgetter('quantity'))['quantity']
-            self.__round_ask_stats['avg_ask_quantity'] = sum(ask['quantity'] for ask in asks) / len(asks)
-            self.__round_ask_stats['total_ask_quantity'] = sum(ask['quantity'] for ask in asks)
-            self.__round_ask_stats['std_ask_quantity'] = np.std([ask['quantity'] for ask in asks])
-        else:
-            # self.__round_ask_stats['max_ask_price'] = self.__grid.sell_price()
-            # self.__round_ask_stats['min_ask_price'] = self.__grid.sell_price()
-            self.__round_ask_stats['avg_ask_price'] = self.__grid.sell_price()
-            # self.__round_ask_stats['max_ask_quantity'] = 0
-            # self.__round_ask_stats['min_ask_quantity'] = 0
-            self.__round_ask_stats['avg_ask_quantity'] = 0
-            self.__round_ask_stats['total_ask_quantity'] = 0
-            self.__round_ask_stats['std_ask_quantity'] = 0
+            asks = self.__open[time_delivery]['ask'] #ToDo: make sure these are sorted from lowest to highest
 
         if 'ask' not in self.__open[time_delivery]:
             return
@@ -509,44 +480,147 @@ class Market:
         if 'bid' not in self.__open[time_delivery]:
             return
 
+
+        #ToDo: change the settlement mechanism here
+        # I think the best way to do this is to determine the quantities first
+        # then call the settle method
+        # we first sort bids and asks by quantity from low to high
+        # we then assign the price for each bid and ask based on the supply and demand ratio
+        # we then determine if we have more bidded quantity or asked quantity total,
+        # the smaller one will be fully settled, the larger one will be partially settled
+        # to determine the partial settlement, we:
+        #   for every entry in the fully settled list
+        #   we can calculate the expected settlement for each entry in the partially settled list by
+        #   dividing the fully settled entry's quantity over the number of entries in the partial settlement list
+        #   we then subtract the expected settlement from the partially settled entry's quantity
+        #   if a quantity becomes negative, we have to redistribute this overflow over the remainder of the partially settled entries
+        # the output format of this needs to be compatible with Steven's original __settle function, except for the addition of a settled quantity parameter
+
+        # calculating total supply and demand, calculating and assigning prices
         total_supply_quantity = sum(ask['quantity'] for ask in asks)
         total_demand_quantity = sum(bid['quantity'] for bid in bids)
         round_bid_price, round_ask_price = await self.__determine_round_prices(supply=total_supply_quantity,
                                                                                demand=total_demand_quantity)
+
+        # print(round_bid_price, round_ask_price)
         for bid in bids:
             bid['price'] = round_bid_price
         self.__round_bid_stats['avg_bid_price'] = round_bid_price
+        # self.__round_bid_stats['avg_bid_quantity'] = np.mean([bid['quantity'] for bid in bids])
+        self.__round_bid_stats['total_bid_quantity'] = total_demand_quantity
+        # self.__round_bid_stats['std_bid_quantity'] = np.std([bid['quantity'] for bid in bids])
 
         for ask in asks:
             ask['price'] = round_ask_price
         self.__round_ask_stats['avg_ask_price'] = round_ask_price
+        # self.__round_ask_stats['avg_ask_quantity'] = sum(ask['quantity'] for ask in asks) / len(asks)
+        self.__round_ask_stats['total_ask_quantity'] = total_supply_quantity
+        # self.__round_ask_stats['std_ask_quantity'] = np.std([ask['quantity'] for ask in asks])
 
-        for bid, ask, in itertools.product(bids, asks):
+        # determining which is the fully settled and which is the partially settled list
+        if total_supply_quantity > total_demand_quantity:
+            fully_settled = bids
+            partially_settled = asks
+            partially_settled_target = total_supply_quantity - total_demand_quantity
+             #this is used to doublecheck later
+        else:
+            fully_settled = asks
+            partially_settled = bids
+            partially_settled_target = total_demand_quantity - total_supply_quantity
+
+
+         #this is used to doublecheck later
+
+        # calculating how each entry of fully settled settles on partially settled
+        # we use the key settlement_quantity in partially settled as a tracker for the quantity of settlements this current round
+        # print('---------------------')
+        for fully_settled_entry in fully_settled:
+            # print('to be fully settled entry before:', fully_settled_entry)
+            # print('to be partially settled before:', partially_settled)
+
+            settlement_quantity = fully_settled_entry['quantity'] / len(partially_settled)
+            __settlement_quant = 0
+
+            for index, partially_settled_entry in enumerate(partially_settled):
+                partially_settled_quantity = min(settlement_quantity, partially_settled_entry['quantity'])
+                overflow = settlement_quantity - partially_settled_entry['quantity']
+                if overflow > 0: # we need to redistribute, this means raising the settlement quantity for all next entries
+                    settlement_quantity += overflow / (len(partially_settled) - index - 1)
+
+                # now that all are settled, we can invoke the settle method, depending on which one is the full settled list
+                # setttle can determing the settlement quantity from the partially settled entry 'settlement quantity'
+                if total_supply_quantity > total_demand_quantity:
+                    bid = fully_settled_entry
+                    ask = partially_settled_entry
+                    await self.__check_and_settle(bid, ask, time_delivery, round_bid_price, round_ask_price, partially_settled_quantity)
+                else:
+                    bid = partially_settled_entry
+                    ask = fully_settled_entry
+                    await self.__check_and_settle(bid, ask, time_delivery, round_bid_price, round_ask_price, partially_settled_quantity)
+
+                __settlement_quant += partially_settled_quantity
+                # now that we are settled for this pair
+                # we can also update the fully settled entry
+
+
+                # we can update the quantity of the partially settled entry
+                # partially_settled_entry['quantity'] = partially_settled_entry['quantity'] -  partially_settled_entry['settlement_quantity']
+
+            # we can check if an entry in the partially settled list has a remaining quantity of 0, if so, we can delete it and save some compute time
+            partially_settled[:] = [entry for entry in partially_settled if entry['quantity'] > 0]
+
+            # fully_settled_entry['quantity'] = fully_settled_entry['quantity'] - __settlement_quant
+            # print(fully_settled_entry['quantity'], 'after deducting', __settlement_quant)
+
+            # after all partially settled entries are settled, we can check if the fully settled entry is fully settled
+            # if not, we have made a mistake
+            # print('to be fully settled entry after:', fully_settled_entry)
+            # print('to be partially settled after:', partially_settled)
+            try:
+                assert np.isclose(fully_settled_entry['quantity'], 0), 'fully settled entry is not fully settled, please check the code'
+            except:
+                print('failed to settle fully settled entry')
+
+        try:
+            assert np.isclose(sum(entry['quantity'] for entry in fully_settled), 0), 'fully settled list is not fully settled, please check the code'
+        except:
+            achieved = sum(entry['quantity'] for entry in fully_settled)
+            print('failed to settle fully settled list')
+
+        try:
+            assert np.isclose(sum(entry['quantity'] for entry in partially_settled), partially_settled_target), 'partial settlement target is not met, please check the code'
+        except:
+            achieved = sum(entry['quantity'] for entry in partially_settled)
+            print('failed to settle partially settled list')
+
+
+    async def __check_and_settle(self, bid, ask, time_delivery, round_bid_price, round_ask_price, settlement_q):
             if ask['price'] > bid['price']:
-                continue
+                return False
 
             if bid['participant_id'] == ask['participant_id']:
-                continue
+                return False
 
             # if bid['source'] != ask['source']:
             #     continue
 
             if bid['lock'] or ask['lock']:
-                continue
+                return False
 
             if bid['quantity'] <= 0 or ask['quantity'] <= 0:
-                continue
+                return False
 
             if bid['participant_id'] not in self.__participants:
                 bid['lock'] = True
-                continue
+                return False
 
             if ask['participant_id'] not in self.__participants:
                 ask['lock'] = True
-                continue
+                return False
 
             # Settle highest price bids with lowest price asks
-            await self.__settle(bid, ask, time_delivery, round_bid_price, round_ask_price)
+            #ToDo: we'll have to rewrite this also
+            await self.__settle(bid, ask, time_delivery, round_bid_price, round_ask_price, settlement_q)
 
     async def __determine_round_prices(self, supply, demand):
         #get min price and max price
@@ -571,28 +645,23 @@ class Market:
         assert demand > 0, 'demand is smaller of equal to zero, cannot be'
         assert supply > 0, 'supply is smaller of equal to zero, cannot be'
 
-        if supply > 0 and demand > 0:
-            ratio = supply / demand
+        ratio = supply / demand
 
-            round_ask_price = ask_price_max + ask_slope * ratio
-            round_ask_price = max(round_ask_price, ask_min_price)
-            round_ask_price = min(round_ask_price, ask_price_max)
+        round_ask_price = ask_price_max + ask_slope * ratio
+        round_ask_price = max(round_ask_price, ask_min_price)
+        round_ask_price = min(round_ask_price, ask_price_max)
 
-            round_bid_price = bid_price_max + bid_slope * ratio
-            round_bid_price = max(round_bid_price, bid_min_price)
-            round_bid_price = min(round_bid_price, bid_price_max)
-
-            assert round_bid_price > round_ask_price, 'buy price is less than sell price'
-
-        else: #What to do if demand or supply is zero
-            #ToDo: this might need some work
-            round_bid_price = grid_buy_price
-            round_ask_price = grid_sell_price
+        round_bid_price = bid_price_max + bid_slope * ratio
+        round_bid_price = max(round_bid_price, bid_min_price)
+        round_bid_price = min(round_bid_price, bid_price_max)
 
         return round_bid_price, round_ask_price
 
-    async def __settle(self, bid: dict, ask: dict, time_delivery: tuple, round_bid_price: float, round_ask_price: float, settlement_method=None, locking=False):
+    async def __settle(self, bid: dict, ask: dict, time_delivery: tuple, round_bid_price: float, round_ask_price: float, settlement_q: float, settlement_method=None, locking=False):
         """Performs settlement for bid/ask pairs found during the matching process.
+            this market uses an expectation formulation of the original settlement mechanism. The goal here is to provide more predictable settlements
+            all bids and asks are sorted from lowest to highest quantity
+            we then calculate the expected settlement if the original settlement mechanism was used
 
         If bid/ask are valid, the bid/ask quantities are adjusted, a commitment record is created, and a settlement confirmation is sent to both participants.
 
@@ -624,7 +693,7 @@ class Market:
             return
 
         # only proceed to settle if settlement quantity is positive
-        quantity = min(bid['quantity'], ask['quantity'])
+        quantity = settlement_q
         if quantity <= 0:
             return
 
@@ -638,6 +707,19 @@ class Market:
 
         settlement_price_sell = round_ask_price
         settlement_price_buy = round_bid_price
+
+        # collect stats for Daniel C May
+        self.__round_settle_stats_buf["settlement_price_sell"].append((settlement_price_sell, quantity))
+        self.__round_settle_stats_buf["settlement_price_buy"].append((settlement_price_buy, quantity))
+
+        # Record successful settlements
+        if time_delivery not in self.__settled:
+            self.__settled[time_delivery] = {}
+
+
+        #This is how the settlements are structured
+        #ToDo: ask about how strict this record format is
+        # since now we wont have strict 1 to 1 settlements ... unless we actually do that?
         record = {
             'quantity': quantity,
             'seller_id': ask['participant_id'],
@@ -647,14 +729,6 @@ class Market:
             'settlement_price_buy': settlement_price_buy,
             'time_purchase': settlement_time
         }
-
-        # collect stats for Daniel C May
-        self.__round_settle_stats_buf["settlement_price_sell"].append((settlement_price_sell, quantity))
-        self.__round_settle_stats_buf["settlement_price_buy"].append((settlement_price_buy, quantity))
-
-        # Record successful settlements
-        if time_delivery not in self.__settled:
-            self.__settled[time_delivery] = {}
 
         self.__settled[time_delivery][commit_id] = {
             'time_settlement': settlement_time,
@@ -667,6 +741,7 @@ class Market:
             'lock': locking
         }
 
+        # This is what gets emitted by the market
         message = {
             'commit_id': commit_id,
             'ask_id': ask['uuid'],
@@ -685,7 +760,7 @@ class Market:
                                      callback=self.__settle_confirm_lock)
         else:
             await self.__client.emit('send_settlement', message)
-            bid['quantity'] = max(0, bid['quantity'] - self.__settled[time_delivery][commit_id]['record']['quantity'])
+            bid['quantity'] = max(0, bid['quantity'] - self.__settled[time_delivery][commit_id]['record']['quantity']) #FiXMe: what do these two lines dooo?
             ask['quantity'] = max(0, ask['quantity'] - self.__settled[time_delivery][commit_id]['record']['quantity'])
         self.__status['round_settled'].append(commit_id)
 
@@ -1226,21 +1301,11 @@ class Market:
             self.__round_settle_stats = {}
             self.__round_settle_stats["settled_time"] = tuple(self.__timing['last_settle'])
             self.__round_settle_stats["total_settled_quantity"] = total_sold_quantity if settlements_sell != [] else 0
-            # self.__round_settle_stats["avg_settlement_ask_quantity"] = np.average(settlements_sell[:, 1]) if settlements_sell != [] else 0
-            # self.__round_settle_stats["avg_settlement_bid_quantity"] = np.average(settlements_buy[:, 1]) if settlements_buy != [] else 0
-            # self.__round_settle_stats["max_settlement_ask_quantity"] = np.max(settlements_sell[:, 1]) if settlements_sell != [] else 0
-            # self.__round_settle_stats["max_settlement_bid_quantity"] = np.max(settlements_buy[:, 1]) if settlements_buy != [] else 0
-            # self.__round_settle_stats["avg_settlement_ask_price"] = np.average(settlements_sell[:, 0], weights=settlements_sell[:, 1]) if settlements_sell != [] else self.__grid.sell_price()
-            # self.__round_settle_stats["avg_settlement_bid_price"] = np.average(settlements_buy[:, 0], weights=settlements_buy[:, 1]) if settlements_buy != [] else self.__grid.buy_price()
-            # self.__round_settle_stats["max_settlement_ask_price"] = np.max(settlements_sell[:, 0]) if settlements_sell != [] else self.__grid.sell_price()
-            # self.__round_settle_stats["max_settlement_bid_price"] = np.max(settlements_buy[:, 0]) if settlements_buy != [] else self.__grid.buy_price()
-            # self.__round_settle_stats["min_settlement_ask_price"] = np.min(settlements_sell[:, 0]) if settlements_sell != [] else self.__grid.sell_price()
-            # self.__round_settle_stats["min_settlement_bid_price"] = np.min(settlements_buy[:, 0]) if settlements_buy != [] else self.__grid.buy_price()
-            # self.__round_settle_stats["stdDev_settlement_ask_price"] = np.std(settlements_sell[:, 0]) if settlements_sell != [] else 0
-            # self.__round_settle_stats["stdDev_settlement_bid_price"] = np.std(settlements_buy[:, 0]) if settlements_buy != [] else 0
 
-            self.__round_settle_stats.update(self.__round_bid_stats)
-            self.__round_settle_stats.update(self.__round_ask_stats)
+            for key in self.__round_ask_stats:
+                self.__round_settle_stats[key] = self.__round_ask_stats[key]
+            for key in self.__round_bid_stats:
+                self.__round_settle_stats[key] = self.__round_bid_stats[key]
 
 
             # print(self.__round_settle_stats, flush=True)
