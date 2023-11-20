@@ -96,7 +96,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit", "grid_equivalent"
         "use_synthetic_profile": "Building_1"
       },
@@ -184,7 +184,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_2"
       },
@@ -272,7 +272,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_3"
       },
@@ -360,7 +360,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit", grid_equivalent
         "use_synthetic_profile": "Building_4"
       },
@@ -448,7 +448,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit", grid_equivalent
         "use_synthetic_profile": "Building_5"
       },
@@ -536,7 +536,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit", grid_equivalent
         "use_synthetic_profile": "Building_6"
       },
@@ -624,7 +624,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_7"
       },
@@ -712,7 +712,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_8"
       },
@@ -800,7 +800,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_9"
       },
@@ -888,7 +888,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_10"
       },
@@ -976,7 +976,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_11"
       },
@@ -1064,7 +1064,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_12"
       },
@@ -1152,7 +1152,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_13"
       },
@@ -1240,7 +1240,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_14"
       },
@@ -1328,7 +1328,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_15"
       },
@@ -1416,7 +1416,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_16"
       },
@@ -1504,7 +1504,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_17"
       },

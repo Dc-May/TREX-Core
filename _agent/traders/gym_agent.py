@@ -392,9 +392,13 @@ class Trader:
         """
 
         #ToDo: check if self.next_settle outside of our simulaion
+        gen_settle, load_settle = await self.__participant['read_profile'](self.next_settle)
+        gen_deliver, load_deliver = await self.__participant['read_profile'](self.next_deliver)
+
 
         assert 'storage' in self.learned_actions, 'storage neither in learned actions'
-        target_storage_charge = self.learned_actions['storage'] *3000
+        netload_next_settle = load_settle - gen_settle
+        target_storage_charge =  netload_next_settle + self.learned_actions['storage'] *3000
         target_storage_charge = min(max(target_storage_charge, -3000), 3000)
         storage_schedule = await self.__participant['storage']['check_schedule'](self.next_settle)
         # print(storage_schedule)
@@ -415,25 +419,20 @@ class Trader:
             assert self.learned_actions['price_ask'] is not None
         price_ask = self.learned_actions['price_ask'] if 'price_ask' in self.learned_actions else self.heuristic_actions['price_ask']
 
-        # calculate the net-load for next settle
-        # atm best return 2.688293811899146
-
-        gen_settle, load_settle = await self.__participant['read_profile'](self.next_settle)
-        gen_deliver, load_deliver = await self.__participant['read_profile'](self.next_deliver)
-        storage = storage_schedule['energy_scheduled'] if 'energy_scheduled' in storage_schedule else 0
-        assert storage < 3000, 'storage schedule is too high'
-        assert storage > -3000, 'storage schedule is too low'
+        # storage = storage_schedule['energy_scheduled'] if 'energy_scheduled' in storage_schedule else 0
+        # assert storage < 3000, 'storage schedule is too high'
+        # assert storage > -3000, 'storage schedule is too low'
         net_load = load_settle - gen_settle + storage_charge #ToDo:make sure this is the right way around!
         if 'quantity_bid' not in self.learned_actions:
             assert 'quantity_bid' in self.heuristic_actions, 'quantity_bid neither in learned actions nor in heuristic actions'
-            self.heuristic_actions['quantity_bid'] = max(0, net_load)
+            self.heuristic_actions['quantity_bid'] = 0 #max(0, net_load)
         else:
             assert self.learned_actions['quantity_bid'] is not None
         quantity_bid = self.learned_actions['quantity_bid'] if 'quantity_bid' in self.learned_actions else self.heuristic_actions['quantity_bid']
 
         if 'quantity_ask' not in self.learned_actions:
             assert 'quantity_ask' in self.heuristic_actions, 'quantity_ask neither in learned actions nor in heuristic actions'
-            self.heuristic_actions['quantity_ask'] = max(0, -net_load)
+            self.heuristic_actions['quantity_ask'] = 0# max(0, -net_load)
         else:
             assert self.learned_actions['quantity_ask'] is not None
         quantity_ask = self.learned_actions['quantity_ask'] if 'quantity_ask' in self.learned_actions else self.heuristic_actions['quantity_ask']
@@ -447,7 +446,6 @@ class Trader:
         return decoded_action
 
     @tenacity.retry(wait=tenacity.wait_fixed(0.01)
-                          + tenacity.wait_random(0, 0.01),
                     )
     async def read_action_from_sml(self):
         """
