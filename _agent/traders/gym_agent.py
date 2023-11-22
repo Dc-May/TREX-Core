@@ -195,6 +195,19 @@ class Trader:
             soc = storage_schedule[self.next_settle]['projected_soc_end']
             obs_t_dict['SoC_settle'] = soc
 
+        if 'actual_netload_now' in self.observation_variables:
+            # get gen and load for current round
+            gen_now, load_now = await self.__participant['read_profile'](self.current_round)
+            # get battery schedule for current round
+            storage_schedule = await self.__participant['storage']['check_schedule'](self.current_round)
+            storage_schedule = storage_schedule[self.current_round]
+            storage = storage_schedule['energy_scheduled']
+
+
+            # calculate netload
+            netload_now = load_now - gen_now + storage
+            obs_t_dict['actual_netload_now'] = netload_now
+
         # ToDo: revert this once market issues are solved
         # collect the settle stats if necessary
         settle_stats = self.__participant['market_info']['settle_stats']
@@ -397,9 +410,8 @@ class Trader:
 
 
         assert 'storage' in self.learned_actions, 'storage neither in learned actions'
-        netload_next_settle = load_settle - gen_settle
-        target_storage_charge =  netload_next_settle + self.learned_actions['storage'] *3000
-        target_storage_charge = min(max(target_storage_charge, -3000), 3000)
+        target_storage_charge =  -(load_settle - gen_settle) + self.learned_actions['storage'] *5000
+        # target_storage_charge = min(max(target_storage_charge, -5000), 5000)
         storage_schedule = await self.__participant['storage']['check_schedule'](self.next_settle)
         # print(storage_schedule)
         min_max_storage_charge = storage_schedule[self.next_settle]['energy_potential']
@@ -419,20 +431,17 @@ class Trader:
             assert self.learned_actions['price_ask'] is not None
         price_ask = self.learned_actions['price_ask'] if 'price_ask' in self.learned_actions else self.heuristic_actions['price_ask']
 
-        # storage = storage_schedule['energy_scheduled'] if 'energy_scheduled' in storage_schedule else 0
-        # assert storage < 3000, 'storage schedule is too high'
-        # assert storage > -3000, 'storage schedule is too low'
         net_load = load_settle - gen_settle + storage_charge #ToDo:make sure this is the right way around!
         if 'quantity_bid' not in self.learned_actions:
             assert 'quantity_bid' in self.heuristic_actions, 'quantity_bid neither in learned actions nor in heuristic actions'
-            self.heuristic_actions['quantity_bid'] = 0 #max(0, net_load)
+            self.heuristic_actions['quantity_bid'] = max(0, net_load)
         else:
             assert self.learned_actions['quantity_bid'] is not None
         quantity_bid = self.learned_actions['quantity_bid'] if 'quantity_bid' in self.learned_actions else self.heuristic_actions['quantity_bid']
 
         if 'quantity_ask' not in self.learned_actions:
             assert 'quantity_ask' in self.heuristic_actions, 'quantity_ask neither in learned actions nor in heuristic actions'
-            self.heuristic_actions['quantity_ask'] = 0# max(0, -net_load)
+            self.heuristic_actions['quantity_ask'] = max(0, -net_load)
         else:
             assert self.learned_actions['quantity_ask'] is not None
         quantity_ask = self.learned_actions['quantity_ask'] if 'quantity_ask' in self.learned_actions else self.heuristic_actions['quantity_ask']

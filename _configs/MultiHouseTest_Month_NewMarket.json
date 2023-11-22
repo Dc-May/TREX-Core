@@ -41,7 +41,6 @@
       "trader": {
         "track_metrics": true,
         "type": "gym_agent",
-        "P_max": 3000,
         "actions": {
           "price_ask": {
             "heuristic": "fixed",
@@ -70,8 +69,8 @@
           // "learned, adjust the max accordingly? Min need to stay at 0
           "storage": {
             "heuristic": "learned",
-            "max": 3000,
-            "min": -3000
+            "max": 5000,
+            "min": -5000
           }
           //"learned", "greedy"
         },
@@ -83,6 +82,8 @@
           "yeartime_cos",
           "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
           "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "actual_netload_now",
 
           "avg_bid_price",
           "total_bid_quantity",
@@ -112,9 +113,9 @@
         // (optional) Defines the storage system to be attached to a participant
         "type": "Bess",
         // storage type, must exist in _devices
-        "capacity": 5000,
+        "capacity": 6400,
         // Usable capacity defined in Wh
-        "power": 3000,
+        "power": 5000,
         // constant charge/discharge rate defined in W
         "efficiency": 0.95,
         // one way efficiency. round-trip efficiency is efficiency^2
@@ -158,8 +159,8 @@
           // "learned, adjust the max accordingly? Min need to stay at 0
           "storage": {
             "heuristic": "learned",
-            "max": 3000,
-            "min": -3000
+            "max": 5000,
+            "min": -5000
           }
           //"learned", "greedy"
         },
@@ -171,6 +172,8 @@
           "yeartime_cos",
           "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
           "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "actual_netload_now",
 
           "avg_bid_price",
           "total_bid_quantity",
@@ -200,9 +203,9 @@
         // (optional) Defines the storage system to be attached to a participant
         "type": "Bess",
         // storage type, must exist in _devices
-        "capacity": 5000,
+        "capacity": 6400,
         // Usable capacity defined in Wh
-        "power": 3000,
+        "power": 5000,
         // constant charge/discharge rate defined in W
         "efficiency": 0.95,
         // one way efficiency. round-trip efficiency is efficiency^2
@@ -217,7 +220,6 @@
       "trader": {
         "track_metrics": true,
         "type": "gym_agent",
-        "P_max": 3000,
         "actions": {
           "price_ask": {
             "heuristic": "fixed",
@@ -246,8 +248,8 @@
           // "learned, adjust the max accordingly? Min need to stay at 0
           "storage": {
             "heuristic": "learned",
-            "max": 3000,
-            "min": -3000
+            "max": 5000,
+            "min": -5000
           }
           //"learned", "greedy"
         },
@@ -259,6 +261,8 @@
           "yeartime_cos",
           "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
           "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "actual_netload_now",
 
           "avg_bid_price",
           "total_bid_quantity",
@@ -288,9 +292,9 @@
         // (optional) Defines the storage system to be attached to a participant
         "type": "Bess",
         // storage type, must exist in _devices
-        "capacity": 5000,
+        "capacity": 6400,
         // Usable capacity defined in Wh
-        "power": 3000,
+        "power": 5000,
         // constant charge/discharge rate defined in W
         "efficiency": 0.95,
         // one way efficiency. round-trip efficiency is efficiency^2
@@ -334,19 +338,21 @@
           // "learned, adjust the max accordingly? Min need to stay at 0
           "storage": {
             "heuristic": "learned",
-            "max": 3000,
-            "min": -3000
+            "max": 5000,
+            "min": -5000
           }
           //"learned", "greedy"
         },
         "learning": true,
-        "observations": [
+         "observations": [
           "daytime_sin",
           "daytime_cos",
           "yeartime_sin",
           "yeartime_cos",
           "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
           "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "actual_netload_now",
 
           "avg_bid_price",
           "total_bid_quantity",
@@ -376,9 +382,9 @@
         // (optional) Defines the storage system to be attached to a participant
         "type": "Bess",
         // storage type, must exist in _devices
-        "capacity": 5000,
+        "capacity": 6400,
         // Usable capacity defined in Wh
-        "power": 3000,
+        "power": 5000,
         // constant charge/discharge rate defined in W
         "efficiency": 0.95,
         // one way efficiency. round-trip efficiency is efficiency^2
@@ -393,7 +399,6 @@
       "trader": {
         "track_metrics": true,
         "type": "gym_agent",
-        "P_max": 3000,
         "actions": {
           "price_ask": {
             "heuristic": "fixed",
@@ -422,8 +427,8 @@
           // "learned, adjust the max accordingly? Min need to stay at 0
           "storage": {
             "heuristic": "learned",
-            "max": 3000,
-            "min": -3000
+            "max": 5000,
+            "min": -5000
           }
           //"learned", "greedy"
         },
@@ -435,6 +440,8 @@
           "yeartime_cos",
           "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
           "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "actual_netload_now",
 
           "avg_bid_price",
           "total_bid_quantity",
@@ -464,9 +471,9 @@
         // (optional) Defines the storage system to be attached to a participant
         "type": "Bess",
         // storage type, must exist in _devices
-        "capacity": 5000,
+        "capacity": 6400,
         // Usable capacity defined in Wh
-        "power": 3000,
+        "power": 5000,
         // constant charge/discharge rate defined in W
         "efficiency": 0.95,
         // one way efficiency. round-trip efficiency is efficiency^2
@@ -481,7 +488,6 @@
       "trader": {
         "track_metrics": true,
         "type": "gym_agent",
-        "P_max": 3000,
         "actions": {
           "price_ask": {
             "heuristic": "fixed",
@@ -510,8 +516,8 @@
           // "learned, adjust the max accordingly? Min need to stay at 0
           "storage": {
             "heuristic": "learned",
-            "max": 3000,
-            "min": -3000
+            "max": 5000,
+            "min": -5000
           }
           //"learned", "greedy"
         },
@@ -523,6 +529,8 @@
           "yeartime_cos",
           "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
           "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "actual_netload_now",
 
           "avg_bid_price",
           "total_bid_quantity",
@@ -552,9 +560,9 @@
         // (optional) Defines the storage system to be attached to a participant
         "type": "Bess",
         // storage type, must exist in _devices
-        "capacity": 5000,
+        "capacity": 6400,
         // Usable capacity defined in Wh
-        "power": 3000,
+        "power": 5000,
         // constant charge/discharge rate defined in W
         "efficiency": 0.95,
         // one way efficiency. round-trip efficiency is efficiency^2
@@ -569,7 +577,6 @@
       "trader": {
         "track_metrics": true,
         "type": "gym_agent",
-        "P_max": 3000,
         "actions": {
           "price_ask": {
             "heuristic": "fixed",
@@ -598,8 +605,8 @@
           // "learned, adjust the max accordingly? Min need to stay at 0
           "storage": {
             "heuristic": "learned",
-            "max": 3000,
-            "min": -3000
+            "max": 5000,
+            "min": -5000
           }
           //"learned", "greedy"
         },
@@ -611,6 +618,8 @@
           "yeartime_cos",
           "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
           "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "actual_netload_now",
 
           "avg_bid_price",
           "total_bid_quantity",
@@ -640,9 +649,9 @@
         // (optional) Defines the storage system to be attached to a participant
         "type": "Bess",
         // storage type, must exist in _devices
-        "capacity": 5000,
+        "capacity": 6400,
         // Usable capacity defined in Wh
-        "power": 3000,
+        "power": 5000,
         // constant charge/discharge rate defined in W
         "efficiency": 0.95,
         // one way efficiency. round-trip efficiency is efficiency^2
@@ -657,7 +666,6 @@
       "trader": {
         "track_metrics": true,
         "type": "gym_agent",
-        "P_max": 3000,
         "actions": {
           "price_ask": {
             "heuristic": "fixed",
@@ -686,8 +694,8 @@
           // "learned, adjust the max accordingly? Min need to stay at 0
           "storage": {
             "heuristic": "learned",
-            "max": 3000,
-            "min": -3000
+            "max": 5000,
+            "min": -5000
           }
           //"learned", "greedy"
         },
@@ -699,6 +707,8 @@
           "yeartime_cos",
           "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
           "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "actual_netload_now",
 
           "avg_bid_price",
           "total_bid_quantity",
@@ -728,9 +738,9 @@
         // (optional) Defines the storage system to be attached to a participant
         "type": "Bess",
         // storage type, must exist in _devices
-        "capacity": 5000,
+        "capacity": 6400,
         // Usable capacity defined in Wh
-        "power": 3000,
+        "power": 5000,
         // constant charge/discharge rate defined in W
         "efficiency": 0.95,
         // one way efficiency. round-trip efficiency is efficiency^2
@@ -745,7 +755,6 @@
       "trader": {
         "track_metrics": true,
         "type": "gym_agent",
-        "P_max": 3000,
         "actions": {
           "price_ask": {
             "heuristic": "fixed",
@@ -774,8 +783,8 @@
           // "learned, adjust the max accordingly? Min need to stay at 0
           "storage": {
             "heuristic": "learned",
-            "max": 3000,
-            "min": -3000
+            "max": 5000,
+            "min": -5000
           }
           //"learned", "greedy"
         },
@@ -787,6 +796,8 @@
           "yeartime_cos",
           "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
           "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "actual_netload_now",
 
           "avg_bid_price",
           "total_bid_quantity",
@@ -816,9 +827,9 @@
         // (optional) Defines the storage system to be attached to a participant
         "type": "Bess",
         // storage type, must exist in _devices
-        "capacity": 5000,
+        "capacity": 6400,
         // Usable capacity defined in Wh
-        "power": 3000,
+        "power": 5000,
         // constant charge/discharge rate defined in W
         "efficiency": 0.95,
         // one way efficiency. round-trip efficiency is efficiency^2
@@ -833,7 +844,6 @@
       "trader": {
         "track_metrics": true,
         "type": "gym_agent",
-        "P_max": 3000,
         "actions": {
           "price_ask": {
             "heuristic": "fixed",
@@ -862,8 +872,8 @@
           // "learned, adjust the max accordingly? Min need to stay at 0
           "storage": {
             "heuristic": "learned",
-            "max": 3000,
-            "min": -3000
+            "max": 5000,
+            "min": -5000
           }
           //"learned", "greedy"
         },
@@ -875,6 +885,8 @@
           "yeartime_cos",
           "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
           "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "actual_netload_now",
 
           "avg_bid_price",
           "total_bid_quantity",
@@ -904,9 +916,9 @@
         // (optional) Defines the storage system to be attached to a participant
         "type": "Bess",
         // storage type, must exist in _devices
-        "capacity": 5000,
+        "capacity": 6400,
         // Usable capacity defined in Wh
-        "power": 3000,
+        "power": 5000,
         // constant charge/discharge rate defined in W
         "efficiency": 0.95,
         // one way efficiency. round-trip efficiency is efficiency^2
@@ -921,7 +933,6 @@
       "trader": {
         "track_metrics": true,
         "type": "gym_agent",
-        "P_max": 3000,
         "actions": {
           "price_ask": {
             "heuristic": "fixed",
@@ -950,8 +961,8 @@
           // "learned, adjust the max accordingly? Min need to stay at 0
           "storage": {
             "heuristic": "learned",
-            "max": 3000,
-            "min": -3000
+            "max": 5000,
+            "min": -5000
           }
           //"learned", "greedy"
         },
@@ -963,6 +974,8 @@
           "yeartime_cos",
           "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
           "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "actual_netload_now",
 
           "avg_bid_price",
           "total_bid_quantity",
@@ -992,9 +1005,9 @@
         // (optional) Defines the storage system to be attached to a participant
         "type": "Bess",
         // storage type, must exist in _devices
-        "capacity": 5000,
+        "capacity": 6400,
         // Usable capacity defined in Wh
-        "power": 3000,
+        "power": 5000,
         // constant charge/discharge rate defined in W
         "efficiency": 0.95,
         // one way efficiency. round-trip efficiency is efficiency^2
@@ -1009,7 +1022,6 @@
       "trader": {
         "track_metrics": true,
         "type": "gym_agent",
-        "P_max": 3000,
         "actions": {
           "price_ask": {
             "heuristic": "fixed",
@@ -1038,8 +1050,8 @@
           // "learned, adjust the max accordingly? Min need to stay at 0
           "storage": {
             "heuristic": "learned",
-            "max": 3000,
-            "min": -3000
+            "max": 5000,
+            "min": -5000
           }
           //"learned", "greedy"
         },
@@ -1051,6 +1063,8 @@
           "yeartime_cos",
           "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
           "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "actual_netload_now",
 
           "avg_bid_price",
           "total_bid_quantity",
@@ -1080,9 +1094,9 @@
         // (optional) Defines the storage system to be attached to a participant
         "type": "Bess",
         // storage type, must exist in _devices
-        "capacity": 5000,
+        "capacity": 6400,
         // Usable capacity defined in Wh
-        "power": 3000,
+        "power": 5000,
         // constant charge/discharge rate defined in W
         "efficiency": 0.95,
         // one way efficiency. round-trip efficiency is efficiency^2
@@ -1097,7 +1111,6 @@
       "trader": {
         "track_metrics": true,
         "type": "gym_agent",
-        "P_max": 3000,
         "actions": {
           "price_ask": {
             "heuristic": "fixed",
@@ -1126,8 +1139,8 @@
           // "learned, adjust the max accordingly? Min need to stay at 0
           "storage": {
             "heuristic": "learned",
-            "max": 3000,
-            "min": -3000
+            "max": 5000,
+            "min": -5000
           }
           //"learned", "greedy"
         },
@@ -1139,6 +1152,8 @@
           "yeartime_cos",
           "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
           "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "actual_netload_now",
 
           "avg_bid_price",
           "total_bid_quantity",
@@ -1168,9 +1183,9 @@
         // (optional) Defines the storage system to be attached to a participant
         "type": "Bess",
         // storage type, must exist in _devices
-        "capacity": 5000,
+        "capacity": 6400,
         // Usable capacity defined in Wh
-        "power": 3000,
+        "power": 5000,
         // constant charge/discharge rate defined in W
         "efficiency": 0.95,
         // one way efficiency. round-trip efficiency is efficiency^2
@@ -1185,7 +1200,6 @@
       "trader": {
         "track_metrics": true,
         "type": "gym_agent",
-        "P_max": 3000,
         "actions": {
           "price_ask": {
             "heuristic": "fixed",
@@ -1214,8 +1228,8 @@
           // "learned, adjust the max accordingly? Min need to stay at 0
           "storage": {
             "heuristic": "learned",
-            "max": 3000,
-            "min": -3000
+            "max": 5000,
+            "min": -5000
           }
           //"learned", "greedy"
         },
@@ -1227,6 +1241,8 @@
           "yeartime_cos",
           "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
           "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "actual_netload_now",
 
           "avg_bid_price",
           "total_bid_quantity",
@@ -1256,9 +1272,9 @@
         // (optional) Defines the storage system to be attached to a participant
         "type": "Bess",
         // storage type, must exist in _devices
-        "capacity": 5000,
+        "capacity": 6400,
         // Usable capacity defined in Wh
-        "power": 3000,
+        "power": 5000,
         // constant charge/discharge rate defined in W
         "efficiency": 0.95,
         // one way efficiency. round-trip efficiency is efficiency^2
@@ -1273,7 +1289,6 @@
       "trader": {
         "track_metrics": true,
         "type": "gym_agent",
-        "P_max": 3000,
         "actions": {
           "price_ask": {
             "heuristic": "fixed",
@@ -1302,8 +1317,8 @@
           // "learned, adjust the max accordingly? Min need to stay at 0
           "storage": {
             "heuristic": "learned",
-            "max": 3000,
-            "min": -3000
+            "max": 5000,
+            "min": -5000
           }
           //"learned", "greedy"
         },
@@ -1315,6 +1330,8 @@
           "yeartime_cos",
           "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
           "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "actual_netload_now",
 
           "avg_bid_price",
           "total_bid_quantity",
@@ -1344,9 +1361,9 @@
         // (optional) Defines the storage system to be attached to a participant
         "type": "Bess",
         // storage type, must exist in _devices
-        "capacity": 5000,
+        "capacity": 6400,
         // Usable capacity defined in Wh
-        "power": 3000,
+        "power": 5000,
         // constant charge/discharge rate defined in W
         "efficiency": 0.95,
         // one way efficiency. round-trip efficiency is efficiency^2
@@ -1361,7 +1378,6 @@
       "trader": {
         "track_metrics": true,
         "type": "gym_agent",
-        "P_max": 3000,
         "actions": {
           "price_ask": {
             "heuristic": "fixed",
@@ -1390,8 +1406,8 @@
           // "learned, adjust the max accordingly? Min need to stay at 0
           "storage": {
             "heuristic": "learned",
-            "max": 3000,
-            "min": -3000
+            "max": 5000,
+            "min": -5000
           }
           //"learned", "greedy"
         },
@@ -1403,6 +1419,8 @@
           "yeartime_cos",
           "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
           "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "actual_netload_now",
 
           "avg_bid_price",
           "total_bid_quantity",
@@ -1432,9 +1450,9 @@
         // (optional) Defines the storage system to be attached to a participant
         "type": "Bess",
         // storage type, must exist in _devices
-        "capacity": 5000,
+        "capacity": 6400,
         // Usable capacity defined in Wh
-        "power": 3000,
+        "power": 5000,
         // constant charge/discharge rate defined in W
         "efficiency": 0.95,
         // one way efficiency. round-trip efficiency is efficiency^2
@@ -1449,7 +1467,6 @@
       "trader": {
         "track_metrics": true,
         "type": "gym_agent",
-        "P_max": 3000,
         "actions": {
           "price_ask": {
             "heuristic": "fixed",
@@ -1478,8 +1495,8 @@
           // "learned, adjust the max accordingly? Min need to stay at 0
           "storage": {
             "heuristic": "learned",
-            "max": 3000,
-            "min": -3000
+            "max": 5000,
+            "min": -5000
           }
           //"learned", "greedy"
         },
@@ -1491,6 +1508,8 @@
           "yeartime_cos",
           "netload_settle", //"netload_deliver", "netload_settle", "netload_now",
           "SoC_settle", //SoC, Need to check if this actyuall works!!!!
+
+          "actual_netload_now",
 
           "avg_bid_price",
           "total_bid_quantity",
@@ -1520,9 +1539,9 @@
         // (optional) Defines the storage system to be attached to a participant
         "type": "Bess",
         // storage type, must exist in _devices
-        "capacity": 5000,
+        "capacity": 6400,
         // Usable capacity defined in Wh
-        "power": 3000,
+        "power": 5000,
         // constant charge/discharge rate defined in W
         "efficiency": 0.95,
         // one way efficiency. round-trip efficiency is efficiency^2
