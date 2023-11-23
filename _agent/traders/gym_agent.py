@@ -410,7 +410,7 @@ class Trader:
 
 
         assert 'storage' in self.learned_actions, 'storage neither in learned actions'
-        target_storage_charge =  -(load_settle - gen_settle) + self.learned_actions['storage'] *5000
+        target_storage_charge = -(load_settle - gen_settle) + self.learned_actions['storage'] *5000  #FixMe: revert
         # target_storage_charge = min(max(target_storage_charge, -5000), 5000)
         storage_schedule = await self.__participant['storage']['check_schedule'](self.next_settle)
         # print(storage_schedule)
@@ -434,14 +434,14 @@ class Trader:
         net_load = load_settle - gen_settle + storage_charge #ToDo:make sure this is the right way around!
         if 'quantity_bid' not in self.learned_actions:
             assert 'quantity_bid' in self.heuristic_actions, 'quantity_bid neither in learned actions nor in heuristic actions'
-            self.heuristic_actions['quantity_bid'] = max(0, net_load)
+            self.heuristic_actions['quantity_bid'] = max(0, net_load)  #FixMe: revert
         else:
             assert self.learned_actions['quantity_bid'] is not None
         quantity_bid = self.learned_actions['quantity_bid'] if 'quantity_bid' in self.learned_actions else self.heuristic_actions['quantity_bid']
 
         if 'quantity_ask' not in self.learned_actions:
             assert 'quantity_ask' in self.heuristic_actions, 'quantity_ask neither in learned actions nor in heuristic actions'
-            self.heuristic_actions['quantity_ask'] = max(0, -net_load)
+            self.heuristic_actions['quantity_ask'] = max(0, -net_load) #FixMe: revert
         else:
             assert self.learned_actions['quantity_ask'] is not None
         quantity_ask = self.learned_actions['quantity_ask'] if 'quantity_ask' in self.learned_actions else self.heuristic_actions['quantity_ask']

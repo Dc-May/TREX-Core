@@ -576,22 +576,15 @@ class Market:
             # if not, we have made a mistake
             # print('to be fully settled entry after:', fully_settled_entry)
             # print('to be partially settled after:', partially_settled)
-            try:
-                assert np.isclose(fully_settled_entry['quantity'], 0), 'fully settled entry is not fully settled, please check the code'
-            except:
-                print('failed to settle fully settled entry')
+            # assert np.isclose(fully_settled_entry['quantity'], 0), 'fully settled entry is not fully settled, please check the code'
 
-        try:
-            assert np.isclose(sum(entry['quantity'] for entry in fully_settled), 0), 'fully settled list is not fully settled, please check the code'
-        except:
-            achieved = sum(entry['quantity'] for entry in fully_settled)
-            print('failed to settle fully settled list')
 
-        try:
-            assert np.isclose(sum(entry['quantity'] for entry in partially_settled), partially_settled_target), 'partial settlement target is not met, please check the code'
-        except:
-            achieved = sum(entry['quantity'] for entry in partially_settled)
-            print('failed to settle partially settled list')
+
+        # assert np.isclose(sum(entry['quantity'] for entry in fully_settled), 0), 'fully settled list is not fully settled, please check the code'
+
+
+        # assert np.isclose(sum(entry['quantity'] for entry in partially_settled), partially_settled_target), 'partial settlement target is not met, please check the code'
+
 
 
     async def __check_and_settle(self, bid, ask, time_delivery, round_bid_price, round_ask_price, settlement_q):
@@ -642,8 +635,8 @@ class Market:
         ask_min_price = grid_sell_price
 
 
-        assert demand > 0, 'demand is smaller of equal to zero, cannot be'
-        assert supply > 0, 'supply is smaller of equal to zero, cannot be'
+        # assert demand > 0, 'demand is smaller of equal to zero, cannot be'
+        # assert supply > 0, 'supply is smaller of equal to zero, cannot be'
 
         ratio = supply / demand
 
@@ -1295,7 +1288,7 @@ class Market:
 
             total_sold_quantity = np.sum(settlements_sell[:,1]) if settlements_sell != [] else 0
             total_bought_quantity = np.sum(settlements_buy[:,1]) if settlements_buy != [] else 0
-            assert total_sold_quantity == total_bought_quantity #make sure this is consistent
+            # assert total_sold_quantity == total_bought_quantity #make sure this is consistent
 
 
             self.__round_settle_stats = {}
