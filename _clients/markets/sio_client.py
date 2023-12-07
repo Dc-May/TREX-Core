@@ -23,6 +23,7 @@ class Client:
                                                reconnection_delay=1,
                                                reconnection_delay_max=5,
                                                randomization_factor=0.5,
+                                               handle_sigint=True,
                                                json=jkson)
 
         market_configs = market_configs

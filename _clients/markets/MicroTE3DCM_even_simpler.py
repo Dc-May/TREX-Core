@@ -73,7 +73,7 @@ class Market:
         # end new data buffers for Daniel C May
 
         self.__db = {}
-        self.save_transactions = True
+        self.save_transactions = False #FixMe: later once we have a better idea of what we want to save, we can turn this on
         self.market_id = market_id
         self.__client = kwargs['sio_client']
         self.__server_ts = 0
@@ -112,8 +112,8 @@ class Market:
         self.__timing['mode'] = mode
 
     async def open_db(self, db_string, table_name):
-        if not self.save_transactions:
-            return
+        # if not self.save_transactions:
+        #     return
 
         self.__db['path'] = db_string
         self.__db['table_name'] = table_name
@@ -528,7 +528,6 @@ class Market:
             partially_settled = bids
             partially_settled_target = total_demand_quantity - total_supply_quantity
 
-
          #this is used to doublecheck later
 
         # calculating how each entry of fully settled settles on partially settled
@@ -552,22 +551,21 @@ class Market:
                 if total_supply_quantity > total_demand_quantity:
                     bid = fully_settled_entry
                     ask = partially_settled_entry
-                    await self.__check_and_settle(bid, ask, time_delivery, round_bid_price, round_ask_price, partially_settled_quantity)
                 else:
                     bid = partially_settled_entry
                     ask = fully_settled_entry
-                    await self.__check_and_settle(bid, ask, time_delivery, round_bid_price, round_ask_price, partially_settled_quantity)
+
+                await self.__check_and_settle(bid, ask, time_delivery, round_bid_price, round_ask_price, partially_settled_quantity)
 
                 __settlement_quant += partially_settled_quantity
                 # now that we are settled for this pair
                 # we can also update the fully settled entry
 
-
                 # we can update the quantity of the partially settled entry
                 # partially_settled_entry['quantity'] = partially_settled_entry['quantity'] -  partially_settled_entry['settlement_quantity']
 
             # we can check if an entry in the partially settled list has a remaining quantity of 0, if so, we can delete it and save some compute time
-            partially_settled[:] = [entry for entry in partially_settled if entry['quantity'] > 0]
+            partially_settled[:] = [entry for entry in partially_settled if entry['quantity'] > 0] #FixMe: check if this does not break the overflow calc
 
             # fully_settled_entry['quantity'] = fully_settled_entry['quantity'] - __settlement_quant
             # print(fully_settled_entry['quantity'], 'after deducting', __settlement_quant)
@@ -578,10 +576,7 @@ class Market:
             # print('to be partially settled after:', partially_settled)
             # assert np.isclose(fully_settled_entry['quantity'], 0), 'fully settled entry is not fully settled, please check the code'
 
-
-
         # assert np.isclose(sum(entry['quantity'] for entry in fully_settled), 0), 'fully settled list is not fully settled, please check the code'
-
 
         # assert np.isclose(sum(entry['quantity'] for entry in partially_settled), partially_settled_target), 'partial settlement target is not met, please check the code'
 
@@ -589,27 +584,27 @@ class Market:
 
     async def __check_and_settle(self, bid, ask, time_delivery, round_bid_price, round_ask_price, settlement_q):
             if ask['price'] > bid['price']:
-                return False
+                return
 
             if bid['participant_id'] == ask['participant_id']:
-                return False
+                return
 
             # if bid['source'] != ask['source']:
             #     continue
 
             if bid['lock'] or ask['lock']:
-                return False
+                return
 
             if bid['quantity'] <= 0 or ask['quantity'] <= 0:
-                return False
+                return
 
             if bid['participant_id'] not in self.__participants:
                 bid['lock'] = True
-                return False
+                return
 
             if ask['participant_id'] not in self.__participants:
                 ask['lock'] = True
-                return False
+                return
 
             # Settle highest price bids with lowest price asks
             #ToDo: we'll have to rewrite this also

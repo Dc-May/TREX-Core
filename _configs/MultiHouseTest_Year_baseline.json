@@ -1,14 +1,14 @@
 {
   "version": "3.7.0",
   "study": {
-    "name": "ALEX_V3_run1", // 0bat mean: -79.56335297601616, -netload_settle: 8.129579796950543
+    "name": "EpisodeTests_net_profit_Reward", // 0bat mean: -79.56335297601616, -netload_settle: 8.129579796950543
       "description": "",
       "start_datetime": "2016-08-01 0:0:0", // do not change,
       "start_datetime_sequence": "sequential", // do not change,
       "timezone": "America/Vancouver", // do not change,
       "days": 365, //Change if we want more days, goes up to 365
       "time_step_size": 3600, // do not change, 1 hour
-      "generations": 1000 //Change if we want more generations
+      "generations": 100000 //Change if we want more generations
 //      "profiles_db_location": "taken from configs"
     },
 
@@ -24,11 +24,8 @@
     "market": {
       "id": "",
       "type": "MicroTE3DCM_even_simpler",
-      // no batteries             no market: 0
-      // Greedy (-net_set)        no market:   114.4201340612415
-      // no batteries             market:       60.40023237668403
-      // Greedy (-net_set)        market:      141.51531949
-      // TC baseline              market:      144.9
+      // no batteries             no market: 0                      MicroTE3DCM_simple: 4.723780547137312,    MicroTE3DCM_even_simpler 4.646189197380778
+      // Greedy (-net_set)        no market:  8.129579796950543                          10.190324238617912                            10.168231200532611
       "close_steps": 2,
       "grid": {
         "price": 0.069,
@@ -42,7 +39,7 @@
       // I'd recommend keeping the name the same as the name of the synthetic profile
       "type": "Residential",
       "trader": {
-        "track_metrics": false,
+        "track_metrics": true,
         "type": "gym_agent",
         "actions": {
           "price_ask": {
@@ -100,7 +97,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit", "grid_equivalent"
         "use_synthetic_profile": "Building_1"
       },
@@ -131,8 +128,9 @@
       // I'd recommend keeping the name the same as the name of the synthetic profile
       "type": "Residential",
       "trader": {
-        "track_metrics": false,
+        "track_metrics": true,
         "type": "gym_agent",
+        "P_max": 3000,
         "actions": {
           "price_ask": {
             "heuristic": "fixed",
@@ -189,7 +187,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_2"
       },
@@ -220,7 +218,7 @@
       // I'd recommend keeping the name the same as the name of the synthetic profile
       "type": "Residential",
       "trader": {
-        "track_metrics": false,
+        "track_metrics": true,
         "type": "gym_agent",
         "actions": {
           "price_ask": {
@@ -278,7 +276,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_3"
       },
@@ -309,8 +307,9 @@
       // I'd recommend keeping the name the same as the name of the synthetic profile
       "type": "Residential",
       "trader": {
-        "track_metrics": false,
+        "track_metrics": true,
         "type": "gym_agent",
+        "P_max": 3000,
         "actions": {
           "price_ask": {
             "heuristic": "fixed",
@@ -367,7 +366,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit", grid_equivalent
         "use_synthetic_profile": "Building_4"
       },
@@ -398,7 +397,7 @@
       // I'd recommend keeping the name the same as the name of the synthetic profile
       "type": "Residential",
       "trader": {
-        "track_metrics": false,
+        "track_metrics": true,
         "type": "gym_agent",
         "actions": {
           "price_ask": {
@@ -456,7 +455,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit", grid_equivalent
         "use_synthetic_profile": "Building_5"
       },
@@ -487,7 +486,7 @@
       // I'd recommend keeping the name the same as the name of the synthetic profile
       "type": "Residential",
       "trader": {
-        "track_metrics": false,
+        "track_metrics": true,
         "type": "gym_agent",
         "actions": {
           "price_ask": {
@@ -545,7 +544,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit", grid_equivalent
         "use_synthetic_profile": "Building_6"
       },
@@ -576,7 +575,7 @@
       // I'd recommend keeping the name the same as the name of the synthetic profile
       "type": "Residential",
       "trader": {
-        "track_metrics": false,
+        "track_metrics": true,
         "type": "gym_agent",
         "actions": {
           "price_ask": {
@@ -634,7 +633,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_7"
       },
@@ -665,7 +664,7 @@
       // I'd recommend keeping the name the same as the name of the synthetic profile
       "type": "Residential",
       "trader": {
-        "track_metrics": false,
+        "track_metrics": true,
         "type": "gym_agent",
         "actions": {
           "price_ask": {
@@ -723,7 +722,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_8"
       },
@@ -754,7 +753,7 @@
       // I'd recommend keeping the name the same as the name of the synthetic profile
       "type": "Residential",
       "trader": {
-        "track_metrics": false,
+        "track_metrics": true,
         "type": "gym_agent",
         "actions": {
           "price_ask": {
@@ -812,7 +811,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_9"
       },
@@ -843,7 +842,7 @@
       // I'd recommend keeping the name the same as the name of the synthetic profile
       "type": "Residential",
       "trader": {
-        "track_metrics": false,
+        "track_metrics": true,
         "type": "gym_agent",
         "actions": {
           "price_ask": {
@@ -901,7 +900,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_10"
       },
@@ -932,7 +931,7 @@
       // I'd recommend keeping the name the same as the name of the synthetic profile
       "type": "Residential",
       "trader": {
-        "track_metrics": false,
+        "track_metrics": true,
         "type": "gym_agent",
         "actions": {
           "price_ask": {
@@ -990,7 +989,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_11"
       },
@@ -1021,7 +1020,7 @@
       // I'd recommend keeping the name the same as the name of the synthetic profile
       "type": "Residential",
       "trader": {
-        "track_metrics": false,
+        "track_metrics": true,
         "type": "gym_agent",
         "actions": {
           "price_ask": {
@@ -1079,7 +1078,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_12"
       },
@@ -1110,7 +1109,7 @@
       // I'd recommend keeping the name the same as the name of the synthetic profile
       "type": "Residential",
       "trader": {
-        "track_metrics": false,
+        "track_metrics": true,
         "type": "gym_agent",
         "actions": {
           "price_ask": {
@@ -1168,7 +1167,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_13"
       },
@@ -1199,7 +1198,7 @@
       // I'd recommend keeping the name the same as the name of the synthetic profile
       "type": "Residential",
       "trader": {
-        "track_metrics": false,
+        "track_metrics": true,
         "type": "gym_agent",
         "actions": {
           "price_ask": {
@@ -1257,7 +1256,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_14"
       },
@@ -1288,7 +1287,7 @@
       // I'd recommend keeping the name the same as the name of the synthetic profile
       "type": "Residential",
       "trader": {
-        "track_metrics": false,
+        "track_metrics": true,
         "type": "gym_agent",
         "actions": {
           "price_ask": {
@@ -1346,7 +1345,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_15"
       },
@@ -1377,7 +1376,7 @@
       // I'd recommend keeping the name the same as the name of the synthetic profile
       "type": "Residential",
       "trader": {
-        "track_metrics": false,
+        "track_metrics": true,
         "type": "gym_agent",
         "actions": {
           "price_ask": {
@@ -1435,7 +1434,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_16"
       },
@@ -1466,7 +1465,7 @@
       // I'd recommend keeping the name the same as the name of the synthetic profile
       "type": "Residential",
       "trader": {
-        "track_metrics": false,
+        "track_metrics": true,
         "type": "gym_agent",
         "actions": {
           "price_ask": {
@@ -1524,7 +1523,7 @@
           //"total_settled_quantity", // might not be needed since it can be inferred from the other quantities
         ],
         //
-        "reward_function": "net_profit",
+        "reward_function": "grid_equivalent",
         // "economic_advantage", "net_profit"
         "use_synthetic_profile": "Building_17"
       },
