@@ -29,8 +29,22 @@ def get_table(db_string, table_name, engine=None):
         return None
 
     metadata = MetaData()
-    table = sqlalchemy.Table(table_name, metadata, autoload=True, autoload_with=engine)
+    table = sqlalchemy.Table(table_name, metadata,
+                             autoload=True,
+                             autoload_with=engine,
+    )
     return table
+
+# def get_table(db_string, table_name, engine=None):
+#     if not engine:
+#         engine = create_engine(db_string)
+#
+#     if not sqlalchemy.inspect(engine).has_table(table_name):
+#         return None
+#
+#     metadata = MetaData()
+#     table = sqlalchemy.Table(table_name, metadata, autoload_with=engine)
+#     return table
 
 def get_table_len(db_string, table):
     engine = create_engine(db_string)

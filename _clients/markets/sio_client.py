@@ -23,7 +23,7 @@ class Client:
                                                reconnection_delay=1,
                                                reconnection_delay_max=5,
                                                randomization_factor=0.5,
-                                               handle_sigint=True,
+                                               handle_sigint=True, #FiXMe: Steven told me to 'get rid of this', Nov30 2024
                                                json=jkson)
 
         market_configs = market_configs

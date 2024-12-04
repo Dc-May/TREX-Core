@@ -113,6 +113,7 @@ class Default(socketio.AsyncNamespace):
             clients[market_id] = {}
             self.settle_buf = {}
 
+
         await server.enter_room(sid=sid, room=market_id)
 
         clients[market_id] = {}

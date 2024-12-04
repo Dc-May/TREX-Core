@@ -410,7 +410,7 @@ class Trader:
 
 
         assert 'storage' in self.learned_actions, 'storage neither in learned actions'
-        target_storage_charge = -(load_settle - gen_settle) + self.learned_actions['storage'] *5000  #FixMe: revert
+        target_storage_charge = -(load_settle - gen_settle) + self.learned_actions['storage'] *5000  #FixMe: find a way to implement this into the PPO agent instead
         # target_storage_charge = min(max(target_storage_charge, -5000), 5000)
         storage_schedule = await self.__participant['storage']['check_schedule'](self.next_settle)
         # print(storage_schedule)
